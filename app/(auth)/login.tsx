@@ -1,0 +1,351 @@
+import { useState, useRef } from 'react'
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Platform, Dimensions, ScrollView, KeyboardAvoidingView,
+} from 'react-native'
+import { VideoView, useVideoPlayer } from 'expo-video'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
+import { supabase } from '../../lib/supabase'
+
+const { height } = Dimensions.get('window')
+
+const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bHFkcnJsZ2dvbGdkc3Nkd29oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2ODkyNjIsImV4cCI6MjA5NTI2NTI2Mn0.859w5rLfcdZWG_vhk0tQM0cqcwRluIFlHjLIsM3Sr5o'
+
+export default function LoginScreen() {
+  const insets = useSafeAreaInsets()
+  const [email, setEmail] = useState('')
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
+  const [step, setStep] = useState<'email' | 'otp'>('email')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const otpRefs = useRef<any[]>([])
+
+  const player = useVideoPlayer(
+    require('../../assets/videos/Purificateur_Inox_SequenceFixe_HomePage_Telephone_WEB_HD.mp4'),
+    (p) => { p.loop = true; p.muted = true; p.play() }
+  )
+
+  const handleOtpChange = (val: string, index: number) => {
+    const newValues = [...otpValues]
+    newValues[index] = val
+    setOtpValues(newValues)
+    if (val && index < 5) otpRefs.current[index + 1]?.focus()
+    if (!val && index > 0) otpRefs.current[index - 1]?.focus()
+  }
+
+  const handleSendCode = async () => {
+    if (!email.includes('@')) { setError('Email invalide'); return }
+    setLoading(true); setError('')
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}` },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      const data = await res.json()
+      if (data.success) setStep('otp')
+      else setError('Une erreur est survenue.')
+    } catch { setError('Impossible de contacter le serveur.') }
+    finally { setLoading(false) }
+  }
+
+  const handleVerifyCode = async () => {
+    const fullCode = otpValues.join('')
+    if (fullCode.length !== 6) { setError('Code incomplet'); return }
+    setLoading(true); setError('')
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}` },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), action: 'verify', token: fullCode }),
+      })
+      const data = await res.json()
+      if (data.success && data.access_token) {
+        await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token })
+        router.replace('/(tabs)')
+      } else setError(data.error ?? 'Code invalide')
+    } catch { setError('Erreur de vérification.') }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <View style={styles.root}>
+      {/* VIDEO */}
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="cover"
+        nativeControls={false}
+      />
+
+      {/* GRADIENTS */}
+      <LinearGradient
+        colors={['rgba(8,21,61,0.3)', 'transparent']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.85)']}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: height * 0.65 }}
+      />
+
+      {/* KEYBOARD AVOIDING — technique correcte iOS */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="padding"
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={false}
+          bounces={false}
+        >
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + 32 }]}>
+
+            {/* Inner highlight — réflexion lumineuse sur le verre */}
+            <LinearGradient
+              colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+              style={styles.innerHighlight}
+              pointerEvents="none"
+            />
+
+            {/* Drag handle */}
+            <View style={styles.handle} />
+
+            {/* Logo */}
+            <View style={styles.logoRow}>
+              <View style={styles.logoCircle}>
+                <Text style={{ color: '#fff', fontSize: 16 }}>◉</Text>
+              </View>
+              <Text style={styles.logoText}>puure</Text>
+            </View>
+
+            {step === 'email' ? (
+              <>
+                <Text style={styles.title}>Connexion</Text>
+                <Text style={styles.subtitle}>
+                  Entrez votre email pour recevoir{'\n'}votre code de connexion
+                </Text>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="votre@email.com"
+                  placeholderTextColor="rgba(35,48,86,0.35)"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  keyboardAppearance="light"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="send"
+                  onSubmitEditing={handleSendCode}
+                />
+
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                <TouchableOpacity
+                  style={[styles.btnLime, loading && { opacity: 0.7 }]}
+                  onPress={handleSendCode}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.btnLimeText}>
+                    {loading ? 'Envoi en cours...' : 'Recevoir le code'}
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={styles.footer}>🔒 Accès sécurisé · Clients Puure uniquement</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.title}>Vérification</Text>
+                <Text style={styles.subtitle}>
+                  Code envoyé à{'\n'}
+                  <Text style={{ color: '#2764FF' }}>{email}</Text>
+                </Text>
+
+                <View style={styles.otpRow}>
+                  {otpValues.map((val, i) => (
+                    <TextInput
+                      key={i}
+                      ref={(r) => { otpRefs.current[i] = r }}
+                      style={[styles.otpBox, val ? styles.otpBoxFilled : null]}
+                      value={val}
+                      onChangeText={(v) => handleOtpChange(v.slice(-1), i)}
+                      keyboardType="number-pad"
+                      keyboardAppearance="light"
+                      maxLength={1}
+                      selectTextOnFocus
+                    />
+                  ))}
+                </View>
+
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                <TouchableOpacity
+                  style={[styles.btnLime, loading && { opacity: 0.7 }]}
+                  onPress={handleVerifyCode}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.btnLimeText}>
+                    {loading ? 'Vérification...' : 'Se connecter'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => { setStep('email'); setOtpValues(['', '', '', '', '', '']); setError('') }}
+                  style={{ marginTop: 12, alignItems: 'center' }}
+                >
+                  <Text style={styles.backLink}>← Changer d'adresse email</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#08153d',
+  },
+  sheet: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.9)',
+    borderLeftColor: 'rgba(255,255,255,0.4)',
+    borderRightColor: 'rgba(255,255,255,0.4)',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    shadowColor: '#233056',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 32,
+  },
+  innerHighlight: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 80,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(35,48,86,0.2)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 28,
+  },
+  logoCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#2764FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#233056',
+    letterSpacing: -0.5,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#233056',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: 'rgba(35,48,86,0.6)',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  input: {
+    height: 54,
+    backgroundColor: 'rgba(35,48,86,0.06)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(35,48,86,0.12)',
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#233056',
+    marginBottom: 12,
+  },
+  btnLime: {
+    height: 56,
+    backgroundColor: '#C9FF00',
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  btnLimeText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#233056',
+    letterSpacing: -0.3,
+  },
+  footer: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: 'rgba(35,48,86,0.45)',
+    marginBottom: 8,
+  },
+  error: {
+    color: '#e32c2b',
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  otpRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+    justifyContent: 'center',
+  },
+  otpBox: {
+    width: 46,
+    height: 56,
+    backgroundColor: 'rgba(35,48,86,0.06)',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(35,48,86,0.12)',
+    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#233056',
+  },
+  otpBoxFilled: {
+    borderColor: '#2764FF',
+    backgroundColor: 'rgba(39,100,255,0.06)',
+  },
+  backLink: {
+    color: 'rgba(35,48,86,0.55)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+})
