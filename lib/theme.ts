@@ -11,9 +11,9 @@ export const colors = {
   bluePale: '#E1EAFF',
   blueMedium: '#7098FF',
 
-  // Accent
-  lime: '#C9FF00',
-  limeLight: '#F6FFD4',
+  // Accent — anciennement lime #C9FF00, remplacé par le bleu primaire (le nom de token est conservé)
+  lime: '#2764FF',
+  limeLight: '#E1EAFF',
 
   // Status
   success: '#1EBB6E',

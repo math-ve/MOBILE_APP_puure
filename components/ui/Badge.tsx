@@ -15,7 +15,7 @@ const VARIANTS = {
   error: { bg: 'rgba(227,44,43,0.10)', text: '#e32c2b' },
   info: { bg: 'rgba(39,100,255,0.10)', text: '#2764FF' },
   neutral: { bg: 'rgba(35,48,86,0.08)', text: '#3D5278' },
-  lime: { bg: theme.colors.lime, text: theme.colors.navy },
+  lime: { bg: theme.colors.lime, text: theme.colors.white },
   default: { bg: theme.colors.bluePale, text: theme.colors.blueFooter },
 }
 

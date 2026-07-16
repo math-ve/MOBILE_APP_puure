@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Clés privées — ne jamais committer
+*firebase-adminsdk*.json

@@ -65,7 +65,7 @@ async function registerPushToken(userId: string) {
       .eq('id', userId)
   } catch (e) {
     // Expo Go ne supporte plus les push remote (SDK 53+) — ne bloque pas le login
-    console.warn('Push token registration failed:', e)
+    if (__DEV__) console.warn('Push token registration failed:', e)
   }
 }
 

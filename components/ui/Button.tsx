@@ -43,7 +43,7 @@ export default function Button({
   const variantStyles = {
     primary: { bg: theme.colors.navy, text: theme.colors.white, border: 'transparent' },
     secondary: { bg: theme.colors.white, text: theme.colors.navy, border: 'transparent' },
-    accent: { bg: theme.colors.lime, text: theme.colors.navy, border: 'transparent' },
+    accent: { bg: theme.colors.lime, text: theme.colors.white, border: 'transparent' },
     outline: { bg: 'transparent', text: theme.colors.navy, border: theme.colors.navy },
     destructive: { bg: 'rgba(227,44,43,0.08)', text: theme.colors.error, border: theme.colors.error },
     ghost: { bg: 'transparent', text: theme.colors.textMid, border: 'transparent' },

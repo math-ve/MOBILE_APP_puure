@@ -11,6 +11,7 @@ import { router } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
 import ProgressRing from '../../components/ui/ProgressRing'
+import Logo from '../../components/ui/Logo'
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -226,30 +227,35 @@ export default function HomeScreen() {
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.replace('/(auth)/login'); return }
-    setUserEmail(user.email ?? null)
-    const [{ data: prof }, { data: tim }, { data: subs }, { data: ords }, { data: notifs }] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('cartridge_timers').select('*, filters(*)').eq('user_id', user.id).eq('is_active', true),
-      supabase.from('subscriptions_cache').select('*').eq('user_id', user.id).eq('status', 'active').limit(1),
-      supabase.from('orders_cache').select('*').eq('user_id', user.id).order('shopify_created_at', { ascending: false }).limit(1),
-      supabase.from('notification_logs').select('*').eq('user_id', user.id).order('sent_at', { ascending: false }).limit(20),
-    ])
-    setProfile(prof)
-    setTimers(tim ?? [])
-    setSubscription(subs?.[0] ?? null)
-    setOrder(ords?.[0] ?? null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/(auth)/login'); return }
+      setUserEmail(user.email ?? null)
+      const [{ data: prof }, { data: tim }, { data: subs }, { data: ords }, { data: notifs }] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('cartridge_timers').select('*, filters(*)').eq('user_id', user.id).eq('is_active', true),
+        supabase.from('subscriptions_cache').select('*').eq('user_id', user.id).eq('status', 'active').limit(1),
+        supabase.from('orders_cache').select('*').eq('user_id', user.id).order('shopify_created_at', { ascending: false }).limit(1),
+        supabase.from('notification_logs').select('*').eq('user_id', user.id).order('sent_at', { ascending: false }).limit(20),
+      ])
+      setProfile(prof)
+      setTimers(tim ?? [])
+      setSubscription(subs?.[0] ?? null)
+      setOrder(ords?.[0] ?? null)
 
-    const notifList = notifs ?? []
-    setNotifications(notifList)
-    const lastSeen = await AsyncStorage.getItem(NOTIF_LAST_SEEN_KEY)
-    setHasUnread(
-      notifList.length > 0 &&
-      (!lastSeen || new Date(notifList[0].sent_at).getTime() > new Date(lastSeen).getTime())
-    )
-
-    setLoading(false)
+      const notifList = notifs ?? []
+      setNotifications(notifList)
+      const lastSeen = await AsyncStorage.getItem(NOTIF_LAST_SEEN_KEY)
+      setHasUnread(
+        notifList.length > 0 &&
+        (!lastSeen || new Date(notifList[0].sent_at).getTime() > new Date(lastSeen).getTime())
+      )
+    } catch {
+      // Réseau/backend indisponible : on garde l'UI en état vide plutôt que de crasher.
+      // Le pull-to-refresh permet de réessayer.
+    } finally {
+      setLoading(false)
+    }
   }
 
   const onRefresh = useCallback(async () => {
@@ -297,12 +303,21 @@ export default function HomeScreen() {
       {/* ── SECTION 1 : HEADER NAVY ── */}
       <View style={[styles.header, { paddingTop: insets.top + theme.spacing[5] }]}>
         <View style={{ flex: 1 }}>
+          <View style={styles.headerLogo}>
+            <Logo width={88} color={theme.colors.white} />
+          </View>
           <Text style={styles.greeting}>
             {firstName ? `${getGreeting()}, ${firstName}` : getGreeting()}
           </Text>
           <Text style={styles.dateText}>{formatToday()}</Text>
         </View>
-        <TouchableOpacity style={styles.bellCircle} onPress={openNotifications} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.bellCircle}
+          onPress={openNotifications}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={hasUnread ? 'Notifications, nouvelles notifications non lues' : 'Notifications'}
+        >
           <BellIcon />
           {hasUnread && <View style={styles.bellBadge} />}
         </TouchableOpacity>
@@ -528,6 +543,10 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing[5] + theme.spacing[8],
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  headerLogo: {
+    marginBottom: theme.spacing[3],
+    marginLeft: -9, // compense le blanc tournant du viewBox SVG (~11 % à gauche) pour aligner la goutte sur le texte
   },
   greeting: {
     fontFamily: theme.typography.fontFamily.bold,

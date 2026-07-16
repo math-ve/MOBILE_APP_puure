@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { supabase } from '../../lib/supabase'
+import Logo from '../../components/ui/Logo'
 
 const { height } = Dimensions.get('window')
 
@@ -47,7 +48,7 @@ export default function LoginScreen() {
       })
       const data = await res.json()
       if (data.success) setStep('otp')
-      else setError('Une erreur est survenue.')
+      else setError(data.error ?? 'Une erreur est survenue.')
     } catch { setError('Impossible de contacter le serveur.') }
     finally { setLoading(false) }
   }
@@ -117,10 +118,7 @@ export default function LoginScreen() {
 
             {/* Logo */}
             <View style={styles.logoRow}>
-              <View style={styles.logoCircle}>
-                <Text style={{ color: '#fff', fontSize: 16 }}>◉</Text>
-              </View>
-              <Text style={styles.logoText}>puure</Text>
+              <Logo width={132} />
             </View>
 
             {step === 'email' ? (
@@ -249,25 +247,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logoRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
     marginBottom: 28,
-  },
-  logoCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#2764FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#233056',
-    letterSpacing: -0.5,
   },
   title: {
     fontSize: 28,
@@ -295,7 +277,7 @@ const styles = StyleSheet.create({
   },
   btnLime: {
     height: 56,
-    backgroundColor: '#C9FF00',
+    backgroundColor: '#2764FF',
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
@@ -305,7 +287,7 @@ const styles = StyleSheet.create({
   btnLimeText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#233056',
+    color: '#ffffff',
     letterSpacing: -0.3,
   },
   footer: {

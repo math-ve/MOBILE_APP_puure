@@ -103,14 +103,18 @@ export default function OrdersScreen() {
   const scrollY = useRef(new Animated.Value(0)).current
 
   const loadOrders = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data } = await supabase
-      .from('orders_cache')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('shopify_created_at', { ascending: false })
-    setOrders(data ?? [])
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('orders_cache')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('shopify_created_at', { ascending: false })
+      setOrders(data ?? [])
+    } catch {
+      // Réseau indisponible : on conserve l'état actuel, pull-to-refresh pour réessayer.
+    }
   }
 
   const syncAndReload = async () => {

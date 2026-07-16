@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "735150744874",
+    "project_id": "puure-mobile-app",
+    "storage_bucket": "puure-mobile-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:735150744874:android:6b8f539ec2ee7755bfaa53",
+        "android_client_info": {
+          "package_name": "com.puurefilters.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcclX5naCVBsVQKUugf1fuIwTD8OdFFUc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

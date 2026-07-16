@@ -173,18 +173,22 @@ export default function SubscriptionScreen() {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
 
   const loadSubscriptions = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: subs } = await supabase
-      .from('subscriptions_cache')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('next_billing_date', { ascending: true })
-    // Actifs d'abord, puis pausés, puis annulés
-    const rank: Record<string, number> = { active: 0, paused: 1, cancelled: 2 }
-    setSubscriptions((subs ?? []).sort(
-      (a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3)
-    ))
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: subs } = await supabase
+        .from('subscriptions_cache')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('next_billing_date', { ascending: true })
+      // Actifs d'abord, puis pausés, puis annulés
+      const rank: Record<string, number> = { active: 0, paused: 1, cancelled: 2 }
+      setSubscriptions((subs ?? []).sort(
+        (a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3)
+      ))
+    } catch {
+      // Réseau indisponible : on conserve l'état actuel, pull-to-refresh pour réessayer.
+    }
   }
 
   const triggerSync = async () => {
@@ -211,6 +215,8 @@ export default function SubscriptionScreen() {
     try {
       await triggerSync()
       await loadSubscriptions()
+    } catch {
+      // Sync impossible (réseau) : le cache reste affiché.
     } finally {
       setRefreshing(false)
     }

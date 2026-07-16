@@ -267,6 +267,8 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
                 style={styles.stepperBtn}
                 onPress={() => setDuration(d => Math.max(DURATION_MIN, d - DURATION_STEP))}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Réduire la durée de vie de 15 jours"
               >
                 <Text style={styles.stepperBtnText}>−</Text>
               </TouchableOpacity>
@@ -275,6 +277,8 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
                 style={styles.stepperBtn}
                 onPress={() => setDuration(d => Math.min(DURATION_MAX, d + DURATION_STEP))}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Augmenter la durée de vie de 15 jours"
               >
                 <Text style={styles.stepperBtnText}>+</Text>
               </TouchableOpacity>
@@ -315,19 +319,23 @@ export default function FiltersScreen() {
   const [showModal, setShowModal] = useState(false)
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    setUserId(user.id)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setUserId(user.id)
 
-    const [{ data: filtersData }, { data: timersData }] = await Promise.all([
-      supabase.from('filters').select('*').eq('user_id', user.id).eq('is_active', true),
-      supabase.from('cartridge_timers').select('*').eq('user_id', user.id).eq('is_active', true),
-    ])
+      const [{ data: filtersData }, { data: timersData }] = await Promise.all([
+        supabase.from('filters').select('*').eq('user_id', user.id).eq('is_active', true),
+        supabase.from('cartridge_timers').select('*').eq('user_id', user.id).eq('is_active', true),
+      ])
 
-    setFilters(filtersData ?? [])
-    const timerMap: Record<string, any> = {}
-    for (const t of (timersData ?? [])) timerMap[t.filter_id] = t
-    setTimers(timerMap)
+      setFilters(filtersData ?? [])
+      const timerMap: Record<string, any> = {}
+      for (const t of (timersData ?? [])) timerMap[t.filter_id] = t
+      setTimers(timerMap)
+    } catch {
+      // Réseau/backend indisponible : état vide affiché, pull-to-refresh pour réessayer.
+    }
   }, [])
 
   useEffect(() => {
@@ -664,7 +672,7 @@ const styles = StyleSheet.create({
   btnLimeText: {
     fontFamily: theme.typography.fontFamily.bold,
     fontSize: theme.typography.size.base,
-    color: theme.colors.navy,
+    color: theme.colors.white,
   },
   btnBlueFull: {
     height: 52,

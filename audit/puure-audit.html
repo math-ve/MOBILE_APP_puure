@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  :root{
+    --navy:#233056; --navy2:#0e0e52; --navy3:#08153d;
+    --blue:#2764FF; --lime:#C9FF00; --success:#1EBB6E; --error:#e32c2b; --warn:#ff5c00;
+    --bg:#f3f4ff; --border:#DEE5F0; --tlight:#8A9BBF; --tlight2:#b0bcd4;
+  }
+  html{ font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif; color:var(--navy); }
+  body{ background:#fff; font-size:12px; line-height:1.5; }
+
+  .page{ width:210mm; min-height:297mm; padding:16mm 15mm; position:relative; page-break-after:always; overflow:hidden; }
+  .page:last-child{ page-break-after:auto; }
+
+  /* ---------- COVER ---------- */
+  .cover{ background:linear-gradient(160deg,#233056 0%,#0e0e52 55%,#08153d 100%); color:#fff; display:flex; flex-direction:column; justify-content:center; padding:24mm 18mm; }
+  .cover .brand{ display:flex; align-items:center; gap:12px; margin-bottom:60px; }
+  .cover .dot{ width:34px; height:34px; border-radius:50%; background:var(--blue); display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 6px rgba(39,100,255,.25); }
+  .cover .dot span{ width:12px;height:12px;border-radius:50%;background:#fff; }
+  .cover .brandname{ font-size:26px; font-weight:700; letter-spacing:.5px; }
+  .cover .kicker{ color:var(--lime); font-weight:700; letter-spacing:3px; font-size:13px; text-transform:uppercase; margin-bottom:14px;}
+  .cover h1{ font-size:52px; line-height:1.05; font-weight:800; margin-bottom:22px; }
+  .cover h1 em{ color:var(--lime); font-style:normal; }
+  .cover .sub{ font-size:16px; color:#c7d0e8; max-width:135mm; line-height:1.6; }
+  .cover .meta{ margin-top:70px; display:flex; gap:40px; flex-wrap:wrap; }
+  .cover .meta div .l{ font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--tlight2); }
+  .cover .meta div .v{ font-size:15px; font-weight:600; margin-top:3px; color:#fff; }
+  .cover .statstrip{ margin-top:34px; display:flex; gap:14px; }
+  .cover .stat{ background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); border-radius:14px; padding:16px 18px; flex:1; }
+  .cover .stat .n{ font-size:30px; font-weight:800; color:var(--lime); }
+  .cover .stat .t{ font-size:11px; color:#c7d0e8; margin-top:2px; }
+
+  /* ---------- HEADINGS ---------- */
+  .section-head{ display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+  .section-head .num{ background:var(--navy); color:#fff; width:42px;height:42px;border-radius:12px; display:flex;align-items:center;justify-content:center; font-weight:800; font-size:18px; }
+  .section-head h2{ font-size:24px; font-weight:800; }
+  .section-head .tag{ margin-left:auto; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--tlight); font-weight:700; }
+  .lead{ color:#4a5878; font-size:13px; margin-bottom:20px; max-width:150mm; }
+
+  h3{ font-size:15px; font-weight:800; margin:22px 0 12px; display:flex; align-items:center; gap:9px; }
+  h3 .ic{ width:24px;height:24px;border-radius:7px; background:var(--bg); display:inline-flex;align-items:center;justify-content:center; font-size:13px; }
+
+  /* ---------- CARDS ---------- */
+  .grid{ display:grid; gap:12px; }
+  .g2{ grid-template-columns:1fr 1fr; }
+  .g3{ grid-template-columns:1fr 1fr 1fr; }
+  .card{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:16px 17px; }
+  .card.soft{ background:var(--bg); border-color:transparent; }
+  .card .ct{ font-weight:800; font-size:13px; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .card .ci{ width:26px;height:26px;border-radius:8px; background:var(--navy); color:#fff; display:inline-flex;align-items:center;justify-content:center; font-size:14px; }
+  .card ul{ list-style:none; }
+  .card li{ position:relative; padding-left:16px; margin:5px 0; font-size:11.5px; color:#3c4a6b; line-height:1.45; }
+  .card li:before{ content:''; position:absolute; left:0; top:6px; width:6px;height:6px;border-radius:50%; background:var(--blue); }
+  .card li b{ color:var(--navy); font-weight:700; }
+
+  /* feature rows */
+  .frow{ display:flex; gap:12px; padding:11px 0; border-bottom:1px dashed var(--border); }
+  .frow:last-child{ border-bottom:none; }
+  .frow .fic{ flex:0 0 34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--blue),#1b4fd6); color:#fff; display:flex;align-items:center;justify-content:center; font-size:16px; }
+  .frow .fbody .fh{ font-weight:700; font-size:12.5px; }
+  .frow .fbody .fd{ font-size:11px; color:#5a688a; margin-top:2px; line-height:1.45; }
+
+  /* pills / badges */
+  .pill{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:9.5px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; }
+  .p-done{ background:#e2f7ec; color:var(--success); }
+  .p-blue{ background:#e6eeff; color:var(--blue); }
+  .p-warn{ background:#fff0e5; color:var(--warn); }
+  .p-navy{ background:#e7ebf5; color:var(--navy); }
+  .p-lime{ background:#f2ffcc; color:#6b7d00; }
+
+  /* action table */
+  table{ width:100%; border-collapse:collapse; font-size:11px; }
+  th{ text-align:left; background:var(--navy); color:#fff; padding:9px 11px; font-size:10px; letter-spacing:.6px; text-transform:uppercase; font-weight:700; }
+  th:first-child{ border-radius:9px 0 0 0; } th:last-child{ border-radius:0 9px 0 0; }
+  td{ padding:8px 11px; border-bottom:1px solid var(--border); vertical-align:top; color:#3c4a6b; }
+  tr:nth-child(even) td{ background:#fafbff; }
+  td b{ color:var(--navy); }
+  .mono{ font-family:'SF Mono',Menlo,monospace; font-size:10px; background:var(--bg); padding:1px 6px; border-radius:5px; color:var(--navy); }
+
+  .callout{ background:linear-gradient(135deg,#233056,#0e0e52); color:#fff; border-radius:14px; padding:18px 20px; margin-top:18px; }
+  .callout .cot{ color:var(--lime); font-weight:800; font-size:13px; margin-bottom:6px; letter-spacing:.5px; }
+  .callout p{ font-size:11.5px; color:#cdd6ec; line-height:1.55; }
+
+  .footer{ position:absolute; bottom:9mm; left:15mm; right:15mm; display:flex; justify-content:space-between; font-size:9px; color:var(--tlight); border-top:1px solid var(--border); padding-top:6px; }
+
+  /* screen mock */
+  .screenline{ display:flex; align-items:flex-start; gap:16px; margin-bottom:16px; }
+  .phone{ flex:0 0 62px; }
+  .phone .scr{ width:62px; height:124px; border-radius:12px; border:3px solid var(--navy); background:var(--bg); padding:6px 5px; position:relative; }
+  .phone .scr .bar{ height:5px; border-radius:3px; margin-bottom:4px; }
+  .steps{ counter-reset:s; }
+  .steps .st{ position:relative; padding-left:30px; margin:8px 0; font-size:11.5px; color:#3c4a6b; }
+  .steps .st:before{ counter-increment:s; content:counter(s); position:absolute; left:0; top:-1px; width:20px;height:20px;border-radius:50%; background:var(--lime); color:var(--navy); font-weight:800; font-size:10px; display:flex;align-items:center;justify-content:center; }
+
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; margin:8px 0 4px; font-size:10px; color:#5a688a; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .swatch{ width:11px;height:11px;border-radius:3px; display:inline-block; }
+
+  .toc{ list-style:none; }
+  .toc li{ display:flex; align-items:center; gap:14px; padding:13px 16px; border:1px solid var(--border); border-radius:12px; margin-bottom:9px; }
+  .toc li .tn{ width:30px;height:30px;border-radius:9px; background:var(--navy); color:#fff; font-weight:800; display:flex;align-items:center;justify-content:center; font-size:13px; }
+  .toc li .tt{ font-weight:700; font-size:13px; }
+  .toc li .td{ font-size:10.5px; color:var(--tlight); margin-top:1px; }
+  .toc li .tp{ margin-left:auto; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="page cover">
+  <div class="brand">
+    <div class="dot"><span></span></div>
+    <div class="brandname">puure</div>
+  </div>
+  <div class="kicker">Audit fonctionnel complet · Application mobile</div>
+  <h1>Tout ce que l'utilisateur<br><em>peut faire</em> dans l'app</h1>
+  <div class="sub">Cartographie exhaustive des fonctionnalités destinées aux clients Puure Filters : authentification, suivi des cartouches, commandes &amp; suivi de colis, gestion complète des abonnements, support et notifications.</div>
+
+  <div class="statstrip">
+    <div class="stat"><div class="n">7</div><div class="t">Écrans utilisateur</div></div>
+    <div class="stat"><div class="n">40+</div><div class="t">Actions possibles</div></div>
+    <div class="stat"><div class="n">11</div><div class="t">Edge Functions actives</div></div>
+    <div class="stat"><div class="n">6</div><div class="t">Intégrations externes</div></div>
+  </div>
+
+  <div class="meta">
+    <div><div class="l">Application</div><div class="v">Puure Filters · React Native / Expo SDK 54</div></div>
+    <div><div class="l">Backend</div><div class="v">Supabase (vwlqdrrl…)</div></div>
+    <div><div class="l">Date</div><div class="v">9 juillet 2026</div></div>
+  </div>
+</div>
+
+<!-- ============ SOMMAIRE ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">→</div><h2>Sommaire</h2><div class="tag">Parcours utilisateur</div></div>
+  <p class="lead">L'app s'organise autour d'un écran de connexion et de 5 onglets principaux, complétés par 2 écrans de détail (abonnement &amp; suivi de colis). Voici les grands blocs fonctionnels couverts par cet audit.</p>
+  <ul class="toc">
+    <li><div class="tn">1</div><div><div class="tt">Connexion &amp; compte</div><div class="td">Authentification par code OTP à 6 chiffres, réservée aux clients Puure</div></div><div class="tp"><span class="pill p-done">Opérationnel</span></div></li>
+    <li><div class="tn">2</div><div><div class="tt">Accueil — Tableau de bord</div><div class="td">Vue d'ensemble cartouches, abonnement, dernière commande, cloche de notifications</div></div><div class="tp"><span class="pill p-done">Opérationnel</span></div></li>
+    <li><div class="tn">3</div><div><div class="tt">Mes filtres &amp; timers de cartouche</div><div class="td">Ajouter un filtre, démarrer / remplacer une cartouche, suivre l'usure</div></div><div class="tp"><span class="pill p-done">Opérationnel</span></div></li>
+    <li><div class="tn">4</div><div><div class="tt">Mes commandes &amp; suivi colis</div><div class="td">Historique Shopify, suivi de colis détaillé (17track) traduit en français</div></div><div class="tp"><span class="pill p-done">Opérationnel</span></div></li>
+    <li><div class="tn">5</div><div><div class="tt">Mes abonnements</div><div class="td">Pause / reprise / annulation, fréquence, adresse, code promo, commandes planifiées</div></div><div class="tp"><span class="pill p-done">Opérationnel</span></div></li>
+    <li><div class="tn">6</div><div><div class="tt">Support</div><div class="td">Formulaire catégorisé (10 catégories) envoyé vers le support, contact e-mail direct</div></div><div class="tp"><span class="pill p-done">Opérationnel</span></div></li>
+    <li><div class="tn">7</div><div><div class="tt">Notifications push</div><div class="td">Renouvellement, cartouche 80/95 %, expédition — moteur de campagnes multilingue</div></div><div class="tp"><span class="pill p-done">Opérationnel</span></div></li>
+  </ul>
+
+  <div class="callout">
+    <div class="cot">MÉTHODE D'AUDIT</div>
+    <p>Analyse croisée du code source de l'application mobile (écrans, navigation, appels réseau) et inspection directe de la base de données Supabase de production : 12 tables, politiques RLS, 11 Edge Functions actives et 4 tâches cron planifiées. Chaque fonctionnalité listée a été vérifiée dans le code ET dans le backend réel.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>Sommaire</span></div>
+</div>
+
+<!-- ============ 1. CONNEXION ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">1</div><h2>Connexion &amp; compte</h2><div class="tag">Écran (auth)/login</div></div>
+  <p class="lead">L'accès à l'app est réservé aux clients existants. L'utilisateur se connecte sans mot de passe, via un code à usage unique reçu par e-mail.</p>
+
+  <div class="screenline">
+    <div class="phone"><div class="scr">
+      <div class="bar" style="background:var(--navy); width:40%; height:8px;"></div>
+      <div class="bar" style="background:var(--border); width:90%"></div>
+      <div class="bar" style="background:var(--border); width:70%"></div>
+      <div style="display:flex; gap:3px; margin-top:8px;">
+        <div style="flex:1;height:14px;border:1.5px solid var(--blue);border-radius:3px;"></div>
+        <div style="flex:1;height:14px;border:1.5px solid var(--border);border-radius:3px;"></div>
+        <div style="flex:1;height:14px;border:1.5px solid var(--border);border-radius:3px;"></div>
+      </div>
+      <div class="bar" style="background:var(--lime); width:100%; height:12px; margin-top:10px;"></div>
+    </div></div>
+    <div style="flex:1;">
+      <div class="steps">
+        <div class="st">L'utilisateur saisit son <b>adresse e-mail</b> et tape « Recevoir le code ».</div>
+        <div class="st">Le système <b>vérifie que l'e-mail est bien un client Shopify</b> puis envoie un code à 6 chiffres par e-mail.</div>
+        <div class="st">L'utilisateur saisit le <b>code OTP à 6 cases</b> (avance automatique entre les cases) et tape « Se connecter ».</div>
+        <div class="st">Session ouverte &amp; persistée → redirection vers le tableau de bord. Possibilité de « Changer d'adresse e-mail ».</div>
+      </div>
+    </div>
+  </div>
+
+  <h3><span class="ic">✅</span>Ce que l'utilisateur peut faire</h3>
+  <div class="grid g2">
+    <div class="card">
+      <div class="ct"><span class="ci">✉︎</span>Recevoir son code</div>
+      <ul>
+        <li>Saisir son e-mail (mise en minuscules automatique)</li>
+        <li>Bouton <b>« Recevoir le code »</b> → état « Envoi en cours… »</li>
+        <li>Message d'erreur si e-mail invalide ou non-client</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">🔑</span>Se connecter</div>
+      <ul>
+        <li>Saisir le code à 6 chiffres (clavier numérique)</li>
+        <li>Bouton <b>« Se connecter »</b> → vérification du code</li>
+        <li>Retour arrière pour corriger l'adresse e-mail</li>
+        <li>Session conservée entre les ouvertures de l'app</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="cot">SÉCURITÉ &amp; DONNÉES DU COMPTE</div>
+    <p>Accès sécurisé « Clients Puure uniquement » : un e-mail inconnu de Shopify ne peut pas obtenir de code. Au premier login, le profil est créé/complété automatiquement (e-mail, identifiant client Shopify, langue préférée, jeton de notification push). L'utilisateur peut se déconnecter à tout moment depuis l'accueil — son jeton push est alors effacé.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>1 · Connexion &amp; compte</span></div>
+</div>
+
+<!-- ============ 2. ACCUEIL ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">2</div><h2>Accueil — Tableau de bord</h2><div class="tag">Onglet (tabs)/index</div></div>
+  <p class="lead">Écran d'atterrissage après connexion : salutation personnalisée selon l'heure, état des cartouches, aperçu de l'abonnement et de la dernière commande, centre de notifications.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="ct"><span class="ci">💧</span>Bloc « Vos cartouches »</div>
+      <ul>
+        <li><b>Anneau de progression animé</b> par filtre : % d'usure, couleur verte / orange / rouge selon le niveau</li>
+        <li>Stats : <b>% utilisé</b>, <b>jours restants</b>, <b>durée totale</b></li>
+        <li>Bouton <b>« 💧 Cartouche remplacée »</b> (avec confirmation) qui réinitialise le timer</li>
+        <li>État vide : bouton <b>« Ajouter mon filtre → »</b></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">🔔</span>Cloche de notifications</div>
+      <ul>
+        <li><b>Pastille rouge</b> si des notifications non lues existent</li>
+        <li>Ouvre un panneau listant les 20 dernières notifications (icône, titre, texte, date)</li>
+        <li>Marque automatiquement comme « lues » à l'ouverture</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">🔄</span>Carte « Mon abonnement »</div>
+      <ul>
+        <li>Statut : <b>Actif / Pausé / Aucun</b> (point coloré animé)</li>
+        <li>Date du <b>prochain envoi</b></li>
+        <li>Tap → ouvre l'onglet Abonnements</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">📦</span>Carte « Commande »</div>
+      <ul>
+        <li>Numéro de la <b>dernière commande</b> + statut coloré</li>
+        <li>Livrée / Expédiée / À expédier / Annulée</li>
+        <li>Tap → ouvre l'onglet Commandes</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="ic">✨</span>Interactions &amp; états dynamiques</h3>
+  <div class="grid g3">
+    <div class="card soft"><div class="ct">Tirer pour rafraîchir</div><ul><li>Resynchronise profil, timers, abonnement, commandes &amp; notifications</li></ul></div>
+    <div class="card soft"><div class="ct">Bannière « Eau purifiée »</div><ul><li>S'affiche si toutes les cartouches sont sous 80 % d'usure</li></ul></div>
+    <div class="card soft"><div class="ct">Se déconnecter</div><ul><li>Ferme la session et nettoie le jeton push</li></ul></div>
+  </div>
+
+  <div class="callout">
+    <div class="cot">SYNCHRONISATION AUTOMATIQUE</div>
+    <p>À chaque connexion, l'app déclenche en arrière-plan la synchronisation des commandes (Shopify) et des abonnements (Appstle) — l'utilisateur voit toujours des données à jour sans action manuelle.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>2 · Accueil</span></div>
+</div>
+
+<!-- ============ 3. FILTRES ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">3</div><h2>Mes filtres &amp; cartouches</h2><div class="tag">Onglet (tabs)/filters</div></div>
+  <p class="lead">Le cœur « métier » de l'app : l'utilisateur enregistre ses filtres physiques et suit en temps réel l'usure de chaque cartouche. C'est la seule zone où l'utilisateur écrit directement en base (RLS en écriture complète).</p>
+
+  <h3><span class="ic">➕</span>Ajouter un filtre</h3>
+  <div class="card">
+    <div class="frow"><div class="fic">📝</div><div class="fbody"><div class="fh">Nom du filtre</div><div class="fd">Champ libre — ex. « Filtre cuisine » (obligatoire)</div></div></div>
+    <div class="frow"><div class="fic">🚿</div><div class="fbody"><div class="fh">Type</div><div class="fd">Bascule entre <b>Robinet</b> et <b>Douche</b> (la base accepte aussi « Autre »)</div></div></div>
+    <div class="frow"><div class="fic">📍</div><div class="fbody"><div class="fh">Emplacement</div><div class="fd">Optionnel — ex. « Cuisine », « Salle de bain »</div></div></div>
+    <div class="frow"><div class="fic">⏳</div><div class="fbody"><div class="fh">Durée de vie</div><div class="fd">Sélecteur ± : de 30 à 365 jours, par pas de 15 (défaut 90 jours)</div></div></div>
+    <div class="frow"><div class="fic">💾</div><div class="fbody"><div class="fh">Enregistrer</div><div class="fd">Crée le filtre <b>et</b> démarre automatiquement le timer de cartouche</div></div></div>
+  </div>
+
+  <h3><span class="ic">⏱</span>Gérer une cartouche</h3>
+  <div class="grid g2">
+    <div class="card">
+      <div class="ct"><span class="ci">▶</span>Démarrer le timer</div>
+      <ul>
+        <li>Si le filtre existe mais que le suivi n'a pas commencé</li>
+        <li>Bouton pulsant <b>« ▶ Démarrer le timer »</b> — à activer au moment de l'installation</li>
+        <li>Toast de confirmation « Timer démarré 💧 »</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">💧</span>Remplacer la cartouche</div>
+      <ul>
+        <li><b>Grand anneau de progression</b> (220 px) avec % d'usure</li>
+        <li>Badge <b>« EN PAUSE »</b> si le timer est en pause</li>
+        <li>Bouton <b>« 💧 Cartouche remplacée »</b> → archive l'ancien timer et repart à neuf</li>
+        <li>Toast « Nouvelle cartouche enregistrée 💧 »</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--blue)"></span> 0–79 % · usage normal</span>
+    <span><span class="swatch" style="background:var(--warn)"></span> 80–94 % · à surveiller</span>
+    <span><span class="swatch" style="background:var(--error)"></span> ≥ 95 % · à remplacer</span>
+  </div>
+
+  <div class="callout">
+    <div class="cot">CALCUL DE L'USURE &amp; ALERTES</div>
+    <p>L'usure est calculée à partir de la date d'installation et de la durée de vie prévue, en tenant compte du temps de pause éventuel. Des notifications automatiques sont envoyées lorsque la cartouche atteint <b>80 %</b> puis <b>95 %</b> (voir section 7). Les données sont propres à chaque utilisateur et protégées par RLS.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>3 · Filtres &amp; cartouches</span></div>
+</div>
+
+<!-- ============ 4. COMMANDES ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">4</div><h2>Mes commandes &amp; suivi colis</h2><div class="tag">Onglets orders + écran tracking</div></div>
+  <p class="lead">Historique complet des commandes (synchronisé depuis Shopify) et un écran de suivi de colis très détaillé, avec traduction française des événements transporteur.</p>
+
+  <h3><span class="ic">📦</span>Écran « Mes commandes »</h3>
+  <div class="grid g2">
+    <div class="card">
+      <div class="ct"><span class="ci">🧾</span>Consulter ses commandes</div>
+      <ul>
+        <li>Une carte par commande : n°, date, <b>statut coloré</b></li>
+        <li>Aperçu des produits (2 premiers + « +N autre(s) »)</li>
+        <li>Total formaté en euros</li>
+        <li>Tirer pour rafraîchir → resync + toast « Commandes mises à jour »</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">🚚</span>Suivre un colis</div>
+      <ul>
+        <li>Bouton <b>« 📦 Suivre ma commande → »</b> (si numéro de suivi disponible)</li>
+        <li>Ouvre l'écran de suivi détaillé</li>
+        <li>État vide : <b>« Découvrir nos produits → »</b> vers puurefilters.com</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="ic">🗺</span>Écran de suivi détaillé (tracking)</h3>
+  <div class="card">
+    <div class="frow"><div class="fic">🏷</div><div class="fbody"><div class="fh">Statut en direct</div><div class="fd">Livré, En livraison, En transit, Point relais, Incident… avec icône &amp; couleur</div></div></div>
+    <div class="frow"><div class="fic">📊</div><div class="fbody"><div class="fh">Barre de progression par étapes</div><div class="fd">Infos reçues → Pris en charge → Départ → Arrivée → Point relais → En livraison → Livré (animée)</div></div></div>
+    <div class="frow"><div class="fic">🕓</div><div class="fbody"><div class="fh">Historique chronologique</div><div class="fd">Chaque événement daté &amp; localisé ; bouton « Voir tout l'historique »</div></div></div>
+    <div class="frow"><div class="fic">🌍</div><div class="fbody"><div class="fh">Infos trajet</div><div class="fd">Pays d'origine → destination, durée de transit, n° de suivi</div></div></div>
+    <div class="frow"><div class="fic">🇫🇷</div><div class="fbody"><div class="fh">Traduction &amp; nettoyage automatique</div><div class="fd">Événements traduits en français ; références de villes/pays asiatiques masquées</div></div></div>
+  </div>
+
+  <div class="callout">
+    <div class="cot">DONNÉES EN LECTURE SEULE</div>
+    <p>Les commandes sont un <b>cache en lecture seule</b> côté app (RLS SELECT) : l'utilisateur consulte et suit, mais ne modifie rien. La source de vérité reste Shopify, resynchronisée à la demande ou automatiquement au login. Le suivi colis s'appuie sur l'intégration 17track de la boutique.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>4 · Commandes &amp; suivi</span></div>
+</div>
+
+<!-- ============ 5. ABONNEMENTS (liste) ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">5</div><h2>Mes abonnements</h2><div class="tag">Onglet subscription</div></div>
+  <p class="lead">La zone la plus riche de l'app : gestion autonome et complète des abonnements, sans passer par le site web. Synchronisée avec Appstle.</p>
+
+  <h3><span class="ic">📋</span>Liste des abonnements</h3>
+  <div class="grid g2">
+    <div class="card">
+      <div class="ct"><span class="ci">👁</span>Vue d'ensemble</div>
+      <ul>
+        <li>Carte par abonnement avec <b>image produit</b>, statut (Actif / Pausé / Annulé)</li>
+        <li>Prochaine facturation, <b>fréquence</b>, <b>montant</b></li>
+        <li>Section <b>« Historique »</b> pour les abonnements pausés / annulés</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">⚡</span>Actions rapides</div>
+      <ul>
+        <li><b>⏸ Mettre en pause</b> / <b>▶ Reprendre</b></li>
+        <li><b>✕ Annuler</b> (avec confirmation « action irréversible »)</li>
+        <li><b>→ Voir les détails</b> vers l'écran complet</li>
+        <li>Lien « Gérer sur le site → » en secours</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="ic">📭</span>États vides &amp; secours</h3>
+  <div class="grid g3">
+    <div class="card soft"><div class="ct">Aucun abonnement</div><ul><li>« Voir nos abonnements → » vers la boutique</li></ul></div>
+    <div class="card soft"><div class="ct">Tri intelligent</div><ul><li>Actifs en tête, puis pausés, puis annulés</li></ul></div>
+    <div class="card soft"><div class="ct">Rafraîchir</div><ul><li>Resync Appstle en tirant vers le bas</li></ul></div>
+  </div>
+
+  <div class="callout">
+    <div class="cot">GESTION 100 % AUTONOME DANS L'APP</div>
+    <p>Contrairement aux commandes, l'utilisateur <b>agit réellement</b> sur ses abonnements : chaque action est exécutée en direct auprès d'Appstle via une Edge Function sécurisée, puis le cache local est resynchronisé. La page de détail (page suivante) va encore plus loin.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>5 · Abonnements</span></div>
+</div>
+
+<!-- ============ 5b. ABONNEMENT DÉTAIL ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">5</div><h2>Détail d'un abonnement</h2><div class="tag">Écran subscription-detail · 3 onglets</div></div>
+  <p class="lead">Un véritable centre de gestion : 3 onglets (Détails · Prochaines · Passées) et 4 fenêtres d'action. Tout ce qu'un client ferait sur un portail web, directement dans l'app.</p>
+
+  <h3><span class="ic">⚙️</span>Onglet « Détails » — actions disponibles</h3>
+  <div class="card">
+    <div class="frow"><div class="fic">🔁</div><div class="fbody"><div class="fh">Modifier la fréquence</div><div class="fd">Choix 1 / 2 / 3 / 6 mois → mise à jour immédiate</div></div></div>
+    <div class="frow"><div class="fic">🏠</div><div class="fbody"><div class="fh">Modifier l'adresse de livraison</div><div class="fd">Prénom, nom, adresse, complément, ville, code postal, téléphone, pays (sélecteur UE)</div></div></div>
+    <div class="frow"><div class="fic">🎟</div><div class="fbody"><div class="fh">Appliquer un code promo</div><div class="fd">Saisie + « Appliquer » → confirmation par toast</div></div></div>
+    <div class="frow"><div class="fic">💳</div><div class="fbody"><div class="fh">Voir le moyen de paiement</div><div class="fd">Marque de carte, numéro masqué, expiration, titulaire (lecture seule)</div></div></div>
+    <div class="frow"><div class="fic">🧾</div><div class="fbody"><div class="fh">Détail du prix</div><div class="fd">Quantité, prix actuel, sous-total, livraison, total</div></div></div>
+    <div class="frow"><div class="fic">⏸</div><div class="fbody"><div class="fh">Pause / Reprise / Annulation</div><div class="fd">Mêmes actions que la liste, avec confirmation pour l'annulation</div></div></div>
+  </div>
+
+  <h3><span class="ic">📅</span>Onglets « Prochaines » &amp; « Passées »</h3>
+  <div class="grid g2">
+    <div class="card">
+      <div class="ct"><span class="ci">🔜</span>Commandes à venir</div>
+      <ul>
+        <li><b>Commander maintenant</b> (déclenche la commande immédiatement)</li>
+        <li><b>Passer</b> une commande planifiée (skip)</li>
+        <li><b>Reprogrammer</b> à une nouvelle date (avec option « toutes les suivantes »)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">🗄</span>Commandes passées</div>
+      <ul>
+        <li>Liste des commandes déjà honorées (statut « Livrée »)</li>
+        <li><b>Voir les détails</b> : produits, récapitulatif, adresse de livraison</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="cot">RÉCAP — 10 ACTIONS SUR UN ABONNEMENT</div>
+    <p>Pause · Reprise · Annulation · Changer la fréquence · Modifier l'adresse · Appliquer un code promo · Commander maintenant · Passer une commande · Reprogrammer une commande · Consulter le paiement &amp; l'historique. Tout est fait dans l'app, sans redirection vers un site externe.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>5 · Abonnement (détail)</span></div>
+</div>
+
+<!-- ============ 6. SUPPORT ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">6</div><h2>Support</h2><div class="tag">Onglet (tabs)/support</div></div>
+  <p class="lead">Un point de contact unique et guidé : formulaire catégorisé qui crée une demande de support, plus un contact e-mail direct.</p>
+
+  <h3><span class="ic">📮</span>Envoyer une demande</h3>
+  <div class="card">
+    <div class="frow"><div class="fic">✉︎</div><div class="fbody"><div class="fh">Adresse e-mail</div><div class="fd">Pré-remplie avec l'e-mail du compte connecté</div></div></div>
+    <div class="frow"><div class="fic">🗂</div><div class="fbody"><div class="fh">Catégorie (10 choix)</div><div class="fd">Commande/Livraison · Adaptateur/Compatibilité · Installation · Problème produit · Filtre/Cartouche · Qualité de l'eau · Remboursement/Retour · Abonnement/Facturation · Réclamation · Autre</div></div></div>
+    <div class="frow"><div class="fic">🔖</div><div class="fbody"><div class="fh">Sous-catégorie</div><div class="fd">Apparaît après le choix de catégorie (ex. « Commande non reçue », « Livraison retardée »…)</div></div></div>
+    <div class="frow"><div class="fic">💬</div><div class="fbody"><div class="fh">Message</div><div class="fd">Zone de texte (minimum 10 caractères)</div></div></div>
+    <div class="frow"><div class="fic">🚀</div><div class="fbody"><div class="fh">Envoyer la demande</div><div class="fd">Confirmation « Demande envoyée ✓ » ou message d'erreur clair</div></div></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px;">
+    <div class="card soft"><div class="ct"><span class="ci">📧</span>Contact direct</div><ul><li>Lien vers <b>customercare@puurefilters.com</b> ouvrant l'app mail</li></ul></div>
+    <div class="card soft"><div class="ct"><span class="ci">✔︎</span>Retour immédiat</div><ul><li>Bandeau vert de succès ou rouge d'erreur, formulaire réinitialisé après envoi</li></ul></div>
+  </div>
+
+  <div class="callout">
+    <div class="cot">À NOTER</div>
+    <p>La table <span class="mono">support_tickets</span> existe en base (avec liaison possible à une commande et statut open/pending/solved/closed) et l'utilisateur y a un accès en écriture par RLS. L'envoi actuel passe par un service worker externe côté formulaire ; l'intégration Zendesk complète est prévue comme évolution.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>6 · Support</span></div>
+</div>
+
+<!-- ============ 7. NOTIFICATIONS ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">7</div><h2>Notifications push</h2><div class="tag">Moteur campagnes + cron</div></div>
+  <p class="lead">L'utilisateur reçoit des notifications utiles et contextuelles. Un tap sur la notification l'amène directement au bon écran. Le contenu est multilingue et piloté par un moteur de campagnes côté backend.</p>
+
+  <h3><span class="ic">🔔</span>Notifications reçues par l'utilisateur</h3>
+  <div class="grid g2">
+    <div class="card">
+      <div class="ct"><span class="ci">🔄</span>Renouvellement d'abonnement</div>
+      <ul><li>« Renouvellement dans 2 jours » — envoyée <b>J-2</b> avant facturation</li><li>Tap → onglet Abonnements</li></ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">💧</span>Cartouche en fin de vie</div>
+      <ul><li>Alerte à <b>80 %</b> puis à <b>95 %</b> d'usure</li><li>Tap → onglet Filtres</li></ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">📦</span>Commande expédiée</div>
+      <ul><li>Déclenchée au passage du statut en « expédié »</li><li>Tap → onglet Commandes</li></ul>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ci">📣</span>Campagnes &amp; infos</div>
+      <ul><li>Notifications promo / info diffusées via le moteur de campagnes</li><li>Ciblage par audience, contenu multilingue (FR par défaut)</li></ul>
+    </div>
+  </div>
+
+  <h3><span class="ic">⚙️</span>Comportement &amp; confort</h3>
+  <div class="grid g3">
+    <div class="card soft"><div class="ct">Centre de notifications</div><ul><li>Historique consultable dans la cloche du tableau de bord</li></ul></div>
+    <div class="card soft"><div class="ct">Badge remis à zéro</div><ul><li>À l'ouverture de l'app</li></ul></div>
+    <div class="card soft"><div class="ct">Anti-doublon</div><ul><li>Chaque alerte n'est envoyée qu'une fois par seuil / par jour</li></ul></div>
+  </div>
+
+  <div class="callout">
+    <div class="cot">INFRASTRUCTURE (côté backend)</div>
+    <p>3 tâches cron quotidiennes (renouvellement 08 h 00, cartouche 08 h 15, nettoyage des jetons morts 08 h 45 UTC) + un moteur déclaratif <span class="mono">templates</span> / <span class="mono">audiences</span> / <span class="mono">campaigns</span> administrable. Les jetons push invalides sont purgés automatiquement pour garantir la délivrabilité.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>7 · Notifications</span></div>
+</div>
+
+<!-- ============ MATRICE ACTIONS ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">✦</div><h2>Matrice des actions utilisateur</h2><div class="tag">Vue synthétique</div></div>
+  <p class="lead">Récapitulatif de toutes les actions possibles, écran par écran.</p>
+  <table>
+    <thead><tr><th style="width:22%">Écran</th><th style="width:40%">Action</th><th>Résultat</th></tr></thead>
+    <tbody>
+      <tr><td><b>Connexion</b></td><td>Recevoir le code</td><td>Vérifie le statut client &amp; envoie l'OTP</td></tr>
+      <tr><td><b>Connexion</b></td><td>Se connecter (OTP)</td><td>Ouvre la session, redirige vers l'accueil</td></tr>
+      <tr><td><b>Accueil</b></td><td>Tirer pour rafraîchir</td><td>Resync de toutes les données</td></tr>
+      <tr><td><b>Accueil</b></td><td>Cartouche remplacée</td><td>Réinitialise le timer de la cartouche</td></tr>
+      <tr><td><b>Accueil</b></td><td>Ouvrir la cloche</td><td>Affiche le centre de notifications</td></tr>
+      <tr><td><b>Accueil</b></td><td>Se déconnecter</td><td>Ferme la session, nettoie le jeton push</td></tr>
+      <tr><td><b>Filtres</b></td><td>Ajouter un filtre</td><td>Crée le filtre + démarre le timer</td></tr>
+      <tr><td><b>Filtres</b></td><td>Démarrer le timer</td><td>Lance le suivi d'usure</td></tr>
+      <tr><td><b>Filtres</b></td><td>Cartouche remplacée</td><td>Archive l'ancien timer, en crée un neuf</td></tr>
+      <tr><td><b>Commandes</b></td><td>Rafraîchir / Consulter</td><td>Resync Shopify, affiche l'historique</td></tr>
+      <tr><td><b>Commandes</b></td><td>Suivre ma commande</td><td>Ouvre le suivi de colis détaillé</td></tr>
+      <tr><td><b>Suivi colis</b></td><td>Voir tout l'historique</td><td>Déplie tous les événements du transporteur</td></tr>
+      <tr><td><b>Abonnements</b></td><td>Pause / Reprise / Annuler</td><td>Agit en direct sur le contrat Appstle</td></tr>
+      <tr><td><b>Abonnement (détail)</b></td><td>Modifier la fréquence</td><td>1 / 2 / 3 / 6 mois</td></tr>
+      <tr><td><b>Abonnement (détail)</b></td><td>Modifier l'adresse</td><td>Met à jour l'adresse de livraison</td></tr>
+      <tr><td><b>Abonnement (détail)</b></td><td>Appliquer un code promo</td><td>Applique la réduction au contrat</td></tr>
+      <tr><td><b>Abonnement (détail)</b></td><td>Commander maintenant</td><td>Déclenche une commande immédiate</td></tr>
+      <tr><td><b>Abonnement (détail)</b></td><td>Passer / Reprogrammer</td><td>Skip ou nouvelle date de commande</td></tr>
+      <tr><td><b>Support</b></td><td>Envoyer une demande</td><td>Crée un ticket catégorisé</td></tr>
+      <tr><td><b>Support</b></td><td>Contact e-mail direct</td><td>Ouvre l'app mail vers le support</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="cot">ÉTAT GLOBAL</div>
+    <p>L'ensemble des parcours utilisateur est <b>opérationnel et branché sur le backend réel</b> (11 Edge Functions actives, 12 tables, RLS activé partout, 4 crons planifiés). Évolutions identifiées : intégration Zendesk complète du support, et configuration des credentials FCM/APNs pour les builds de production des notifications.</p>
+  </div>
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>Matrice des actions</span></div>
+</div>
+
+<!-- ============ ARCHITECTURE ============ -->
+<div class="page">
+  <div class="section-head"><div class="num">◈</div><h2>Sous le capot</h2><div class="tag">Données &amp; intégrations</div></div>
+  <p class="lead">Pour référence : les briques qui rendent possible tout ce que l'utilisateur peut faire.</p>
+
+  <h3><span class="ic">🗃</span>Données utilisateur (Supabase — RLS activé)</h3>
+  <table>
+    <thead><tr><th>Table</th><th>Rôle</th><th>Accès utilisateur</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono">profiles</span></td><td>Compte, e-mail, langue, jeton push</td><td>Lecture + mise à jour de son profil</td></tr>
+      <tr><td><span class="mono">filters</span></td><td>Filtres physiques enregistrés</td><td><b>Écriture complète</b></td></tr>
+      <tr><td><span class="mono">cartridge_timers</span></td><td>Timers d'usure des cartouches</td><td><b>Écriture complète</b></td></tr>
+      <tr><td><span class="mono">orders_cache</span></td><td>Historique commandes (Shopify)</td><td>Lecture seule</td></tr>
+      <tr><td><span class="mono">subscriptions_cache</span></td><td>Abonnements (Appstle)</td><td>Lecture seule (actions via functions)</td></tr>
+      <tr><td><span class="mono">support_tickets</span></td><td>Demandes de support</td><td><b>Écriture complète</b></td></tr>
+      <tr><td><span class="mono">notification_logs</span></td><td>Historique des notifications</td><td>Lecture + marquer comme lu</td></tr>
+    </tbody>
+  </table>
+
+  <h3><span class="ic">🔌</span>Intégrations externes</h3>
+  <div class="grid g3">
+    <div class="card soft"><div class="ct">Shopify</div><ul><li>Clients, commandes, expéditions</li></ul></div>
+    <div class="card soft"><div class="ct">Appstle</div><ul><li>Abonnements &amp; contrats</li></ul></div>
+    <div class="card soft"><div class="ct">17track</div><ul><li>Suivi de colis</li></ul></div>
+    <div class="card soft"><div class="ct">Expo Push</div><ul><li>Notifications push</li></ul></div>
+    <div class="card soft"><div class="ct">Resend</div><ul><li>E-mails (codes OTP)</li></ul></div>
+    <div class="card soft"><div class="ct">Support / Zendesk</div><ul><li>Tickets (en cours)</li></ul></div>
+  </div>
+
+  <h3><span class="ic">🧩</span>Edge Functions actives (11)</h3>
+  <div class="card soft">
+    <ul style="columns:2; column-gap:24px;">
+      <li><b>magic-link</b> — connexion OTP</li>
+      <li><b>sync-orders</b> — sync commandes + notif expédition</li>
+      <li><b>sync-subscriptions</b> — sync abonnements</li>
+      <li><b>manage-subscription</b> — pause/reprise/annule/fréquence…</li>
+      <li><b>subscription-action</b> — skip/reprogramme/adresse/promo…</li>
+      <li><b>get-subscription-detail</b> — détails, paiement, adresses</li>
+      <li><b>scrape-tracking</b> — suivi colis 17track</li>
+      <li><b>send-notification</b> — envoi push + journalisation</li>
+      <li><b>notify-renewal</b> — cron J-2 renouvellement</li>
+      <li><b>notify-cartridge</b> — cron alertes 80/95 %</li>
+      <li><b>check-push-receipts</b> — cron purge jetons morts</li>
+    </ul>
+  </div>
+
+  <div class="footer"><span>Puure Filters — Audit fonctionnel</span><span>Architecture</span></div>
+</div>
+
+</body>
+</html>

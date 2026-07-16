@@ -1786,7 +1786,7 @@ const s = StyleSheet.create({
   btnLimeText: {
     fontFamily: theme.typography.fontFamily.bold,
     fontSize: theme.typography.size.base,
-    color: theme.colors.navy,
+    color: theme.colors.white,
   },
   btnNavy: {
     height: 52,

@@ -9,6 +9,7 @@ import Svg, { Path } from 'react-native-svg'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
 import { useToast } from '../../hooks/useToast'
+import Logo from '../../components/ui/Logo'
 
 // Worker Cloudflare qui crée le ticket Zendesk — même endpoint que le site
 const WORKER_URL = 'https://lively-sound-95c2.mathieu-vaneynde.workers.dev/'
@@ -424,7 +425,29 @@ export default function SupportScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.signature}>– L'équipe Puure</Text>
+        <View style={styles.footerBrand}>
+          <Logo width={92} color={theme.colors.navy} />
+          <Text style={styles.signature}>– L'équipe Puure</Text>
+        </View>
+
+        {/* Liens légaux — requis par l'App Store et Google Play */}
+        <View style={styles.legalRow}>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://puurefilters.com/policies/privacy-policy')}
+            accessibilityRole="link"
+            accessibilityLabel="Politique de confidentialité"
+          >
+            <Text style={styles.legalLink}>Politique de confidentialité</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>·</Text>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://puurefilters.com/policies/terms-of-service')}
+            accessibilityRole="link"
+            accessibilityLabel="Conditions d'utilisation"
+          >
+            <Text style={styles.legalLink}>Conditions d'utilisation</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Sheets de sélection */}
@@ -596,17 +619,39 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontFamily: theme.typography.fontFamily.bold,
     fontSize: theme.typography.size.base,
-    color: theme.colors.navy,
+    color: theme.colors.white,
   },
 
+  footerBrand: {
+    alignItems: 'center',
+    marginTop: theme.spacing[5],
+    opacity: 0.75,
+  },
   signature: {
     fontFamily: theme.typography.fontFamily.regular,
     fontSize: theme.typography.size.sm,
     color: theme.colors.textLight,
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: theme.spacing[5],
+    marginTop: theme.spacing[2],
     opacity: 0.7,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing[2],
+    marginTop: theme.spacing[4],
+  },
+  legalLink: {
+    fontFamily: theme.typography.fontFamily.regular,
+    fontSize: theme.typography.size.xs,
+    color: theme.colors.textLight,
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    color: theme.colors.textLight,
+    fontSize: theme.typography.size.xs,
   },
 
   // Sheet
