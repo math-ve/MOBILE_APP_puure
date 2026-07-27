@@ -7,6 +7,13 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "puure",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c1ed5ce2-a996-401f-a527-1f1705efef9e",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.puurefilters.mobile",

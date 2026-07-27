@@ -38,6 +38,30 @@ const formatPrice = (amount?: number | string | null, currency?: string | null) 
   }).format(num)
 }
 
+// Statut réel d'une commande passée d'abonnement (Appstle).
+// Priorité au statut de livraison Shopify (orderDisplayFulfillmentStatus),
+// repli sur le statut de facturation (status = SUCCESS/ERROR).
+const getPastOrderStatus = (order: any): { label: string; color: string; bg: string } => {
+  const fulfillment = (order?.orderDisplayFulfillmentStatus ?? '').toUpperCase()
+  const financial = (order?.orderDisplayFinancialStatus ?? '').toUpperCase()
+  const billing = (order?.status ?? '').toUpperCase()
+  const green = { color: theme.colors.success, bg: 'rgba(30,187,110,0.12)' }
+  const blue = { color: theme.colors.blue, bg: 'rgba(39,100,255,0.10)' }
+  const orange = { color: theme.colors.warning, bg: 'rgba(255,92,0,0.10)' }
+  const red = { color: theme.colors.error, bg: 'rgba(227,44,43,0.10)' }
+
+  // Échec de facturation
+  if (billing && billing !== 'SUCCESS') return { label: 'Échec', ...red }
+  // Statut de livraison connu
+  if (fulfillment === 'FULFILLED') return { label: 'Expédiée', ...blue }
+  if (fulfillment === 'DELIVERED') return { label: 'Livrée', ...green }
+  if (fulfillment === 'PARTIALLY_FULFILLED') return { label: 'Partielle', ...blue }
+  if (fulfillment === 'ON_HOLD' || fulfillment === 'SCHEDULED') return { label: 'En préparation', ...orange }
+  if (financial === 'REFUNDED' || financial === 'PARTIALLY_REFUNDED') return { label: 'Remboursée', ...orange }
+  // Facturée avec succès mais pas encore expédiée (fulfillment null)
+  return { label: 'Confirmée', ...blue }
+}
+
 const formatFrequency = (unit?: string | null, value?: number | null) => {
   if (!unit || value == null) return '—'
   const labels: Record<string, string> = {
@@ -523,12 +547,19 @@ function PastOrderSheet({ order, currency, shippingAddress, onClose }: {
       <Text style={s.sheetSubtitle}>{formatDate(order.billingDate)}</Text>
 
       <View style={s.badgeRow}>
-        <View style={[s.miniBadge, { backgroundColor: 'rgba(30,187,110,0.12)' }]}>
-          <Text style={[s.miniBadgeText, { color: theme.colors.success }]}>PAYÉE</Text>
-        </View>
-        <View style={[s.miniBadge, { backgroundColor: 'rgba(30,187,110,0.12)' }]}>
-          <Text style={[s.miniBadgeText, { color: theme.colors.success }]}>LIVRÉE</Text>
-        </View>
+        {(order.status ?? '').toUpperCase() === 'SUCCESS' && (
+          <View style={[s.miniBadge, { backgroundColor: 'rgba(30,187,110,0.12)' }]}>
+            <Text style={[s.miniBadgeText, { color: theme.colors.success }]}>PAYÉE</Text>
+          </View>
+        )}
+        {(() => {
+          const st = getPastOrderStatus(order)
+          return (
+            <View style={[s.miniBadge, { backgroundColor: st.bg }]}>
+              <Text style={[s.miniBadgeText, { color: st.color }]}>{st.label.toUpperCase()}</Text>
+            </View>
+          )
+        })()}
       </View>
 
       <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
@@ -1060,6 +1091,7 @@ export default function SubscriptionDetailScreen() {
         </CascadeIn>
       ) : pastOrders.map((order: any, index: number) => {
         const variants: any[] = Array.isArray(order.variantList) ? order.variantList : []
+        const orderStatus = getPastOrderStatus(order)
 
         return (
           <CascadeIn key={order.id ?? index} index={index}>
@@ -1069,8 +1101,8 @@ export default function SubscriptionDetailScreen() {
                   <Text style={s.pastOrderNumber}>{order.orderName ?? `Commande ${index + 1}`}</Text>
                   <Text style={s.pastOrderDate}>{formatDateShort(order.billingDate)}</Text>
                 </View>
-                <View style={[s.miniBadge, { backgroundColor: 'rgba(30,187,110,0.12)' }]}>
-                  <Text style={[s.miniBadgeText, { color: theme.colors.success }]}>LIVRÉE</Text>
+                <View style={[s.miniBadge, { backgroundColor: orderStatus.bg }]}>
+                  <Text style={[s.miniBadgeText, { color: orderStatus.color }]}>{orderStatus.label.toUpperCase()}</Text>
                 </View>
               </View>
 
