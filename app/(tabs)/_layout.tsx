@@ -13,7 +13,6 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="orders" />
-      <Tabs.Screen name="subscription" />
       <Tabs.Screen name="filters" />
       <Tabs.Screen name="support" />
     </Tabs>

@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
 import ProgressRing from '../../components/ui/ProgressRing'
@@ -147,6 +148,7 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
   const [type, setType] = useState<'robinet' | 'douche'>('robinet')
   const [location, setLocation] = useState('')
   const [duration, setDuration] = useState(90)
+  const [installDate, setInstallDate] = useState(new Date())
   const [saving, setSaving] = useState(false)
   const slideAnim = useRef(new Animated.Value(600)).current
 
@@ -163,8 +165,20 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
   }, [visible])
 
   const reset = () => {
-    setName(''); setType('robinet'); setLocation(''); setDuration(90)
+    setName(''); setType('robinet'); setLocation(''); setDuration(90); setInstallDate(new Date())
   }
+
+  const openAndroidDatePicker = () => {
+    DateTimePickerAndroid.open({
+      value: installDate,
+      mode: 'date',
+      maximumDate: new Date(),
+      onChange: (_, selected) => { if (selected) setInstallDate(selected) },
+    })
+  }
+
+  const formatInstallDate = (d: Date) =>
+    d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -192,7 +206,8 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
         .insert({
           user_id: userId,
           filter_id: filter.id,
-          started_at: new Date().toISOString(),
+          // Le décompte part de la date d'installation choisie par l'utilisateur
+          started_at: installDate.toISOString(),
           expected_duration_days: duration,
           total_paused_seconds: 0,
           is_active: true,
@@ -259,6 +274,26 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
               value={location}
               onChangeText={setLocation}
             />
+
+            {/* Date d'installation */}
+            <Text style={styles.fieldLabel}>DATE D'INSTALLATION</Text>
+            {Platform.OS === 'ios' ? (
+              <View style={styles.datePickerWrap}>
+                <DateTimePicker
+                  value={installDate}
+                  mode="date"
+                  display="compact"
+                  maximumDate={new Date()}
+                  accentColor={theme.colors.blue}
+                  onChange={(_, selected) => { if (selected) setInstallDate(selected) }}
+                  locale="fr-FR"
+                />
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.fieldInput} onPress={openAndroidDatePicker} activeOpacity={0.7}>
+                <Text style={styles.dateValueText}>{formatInstallDate(installDate)}</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Durée */}
             <Text style={styles.fieldLabel}>DURÉE DE VIE</Text>
@@ -399,6 +434,86 @@ export default function FiltersScreen() {
     )
   }
 
+  // Met en pause / reprend le décompte. À la reprise, on cumule la durée
+  // de pause dans total_paused_seconds pour que le calcul reste exact.
+  const togglePause = async (filter: any) => {
+    const timer = timers[filter.id]
+    if (!timer) return
+    try {
+      if (timer.paused_at) {
+        const pausedMs = Date.now() - new Date(timer.paused_at).getTime()
+        const addedSeconds = Math.max(0, Math.round(pausedMs / 1000))
+        await supabase
+          .from('cartridge_timers')
+          .update({
+            paused_at: null,
+            total_paused_seconds: (timer.total_paused_seconds ?? 0) + addedSeconds,
+          })
+          .eq('id', timer.id)
+        showToast('Timer repris ▶', 'success')
+      } else {
+        await supabase
+          .from('cartridge_timers')
+          .update({ paused_at: new Date().toISOString() })
+          .eq('id', timer.id)
+        showToast('Timer en pause ⏸', 'success')
+      }
+      await load()
+    } catch {
+      showToast('Une erreur est survenue', 'error')
+    }
+  }
+
+  // Supprime le filtre ET sa cartouche (soft-delete via is_active).
+  const deleteFilter = (filter: any) => {
+    const timer = timers[filter.id]
+    Alert.alert(
+      'Supprimer ce filtre',
+      `« ${filter.product_name} » et son suivi de cartouche seront supprimés. Cette action est irréversible.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (timer) {
+                await supabase.from('cartridge_timers').update({ is_active: false }).eq('id', timer.id)
+              }
+              await supabase.from('filters').update({ is_active: false }).eq('id', filter.id)
+              showToast('Filtre supprimé', 'success')
+              await load()
+            } catch {
+              showToast('Une erreur est survenue', 'error')
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  // Menu d'actions sur une cartouche active (pause/reprise + suppression)
+  const openCartridgeMenu = (filter: any) => {
+    const timer = timers[filter.id]
+    const isPaused = !!timer?.paused_at
+    Alert.alert(
+      filter.product_name,
+      'Que souhaitez-vous faire ?',
+      [
+        {
+          text: isPaused ? '▶ Reprendre le suivi' : '⏸ Mettre en pause',
+          onPress: () => togglePause(filter),
+        },
+        {
+          text: '🗑 Supprimer ce filtre',
+          style: 'destructive',
+          onPress: () => deleteFilter(filter),
+        },
+        { text: 'Annuler', style: 'cancel' },
+      ]
+    )
+  }
+
   return (
     <View style={styles.root}>
       <ScrollView
@@ -464,6 +579,16 @@ export default function FiltersScreen() {
                         </Text>
                       </View>
                     )}
+                    {/* Menu d'actions (pause / suppression) */}
+                    <TouchableOpacity
+                      style={styles.menuBtn}
+                      onPress={() => openCartridgeMenu(filter)}
+                      activeOpacity={0.6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Options du filtre ${filter.product_name}`}
+                    >
+                      <Text style={styles.menuBtnText}>⋯</Text>
+                    </TouchableOpacity>
                   </View>
 
                   {timer ? (
@@ -478,7 +603,7 @@ export default function FiltersScreen() {
                         )}
                       </View>
 
-                      {/* 3 stats */}
+                      {/* 2 stats */}
                       <View style={styles.statsRow}>
                         <View style={styles.statCol}>
                           <Text style={styles.statValue}>{progress}%</Text>
@@ -488,11 +613,6 @@ export default function FiltersScreen() {
                         <View style={styles.statCol}>
                           <Text style={styles.statValue}>{daysRemaining}j</Text>
                           <Text style={styles.statLabel}>RESTANTS</Text>
-                        </View>
-                        <View style={styles.statDivider} />
-                        <View style={styles.statCol}>
-                          <Text style={styles.statValue}>{timer.expected_duration_days}j</Text>
-                          <Text style={styles.statLabel}>DURÉE TOT.</Text>
                         </View>
                       </View>
 
@@ -604,6 +724,19 @@ const styles = StyleSheet.create({
   pctBadgeText: {
     fontFamily: theme.typography.fontFamily.bold,
     fontSize: theme.typography.size.xs + 1,
+  },
+  menuBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: theme.spacing[2],
+  },
+  menuBtnText: {
+    fontSize: 22,
+    color: theme.colors.textLight,
+    marginTop: -6,
   },
 
   // Jauge
@@ -800,6 +933,16 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.regular,
     fontSize: theme.typography.size.base,
     color: theme.colors.navy,
+    marginBottom: theme.spacing[4],
+    justifyContent: 'center',
+  },
+  dateValueText: {
+    fontFamily: theme.typography.fontFamily.regular,
+    fontSize: theme.typography.size.base,
+    color: theme.colors.navy,
+  },
+  datePickerWrap: {
+    alignSelf: 'flex-start',
     marginBottom: theme.spacing[4],
   },
   typeRow: {

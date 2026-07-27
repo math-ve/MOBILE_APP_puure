@@ -42,3 +42,6 @@ yarn-error.*
 
 # Clés privées — ne jamais committer
 *firebase-adminsdk*.json
+
+# Supabase CLI temp
+supabase/.temp/

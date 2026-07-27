@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
 import { useToast } from '../../hooks/useToast'
+import SubscriptionsSection, { SubscriptionsSectionHandle } from '../../components/SubscriptionsSection'
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 
@@ -101,6 +102,7 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const scrollY = useRef(new Animated.Value(0)).current
+  const subsRef = useRef<SubscriptionsSectionHandle>(null)
 
   const loadOrders = async () => {
     try {
@@ -144,7 +146,9 @@ export default function OrdersScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    try { await syncAndReload() } finally { setRefreshing(false) }
+    // Rafraîchit commandes ET abonnements en parallèle
+    try { await Promise.all([syncAndReload(), subsRef.current?.reload()]) }
+    finally { setRefreshing(false) }
   }, [])
 
   const headerShadowOpacity = scrollY.interpolate({
@@ -162,7 +166,7 @@ export default function OrdersScreen() {
           { paddingTop: insets.top + theme.spacing[5], shadowOpacity: headerShadowOpacity },
         ]}
       >
-        <Text style={styles.pageTitle}>Mes commandes</Text>
+        <Text style={styles.pageTitle}>Mes abonnements</Text>
       </Animated.View>
 
       <Animated.ScrollView
@@ -177,6 +181,12 @@ export default function OrdersScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.blue} />
         }
       >
+        {/* ── SECTION ABONNEMENT (en tête) ── */}
+        <SubscriptionsSection ref={subsRef} />
+
+        {/* ── SECTION COMMANDES ── */}
+        <Text style={styles.ordersHeading}>MES COMMANDES</Text>
+
         {loading ? (
           <>
             <SkeletonCard />
@@ -273,6 +283,26 @@ export default function OrdersScreen() {
             )
           })
         )}
+
+        {/* Bloc d'aide — visible dès qu'il y a des commandes */}
+        {!loading && orders.length > 0 && (
+          <View style={styles.helpCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.helpTitle}>Un souci avec une commande ?</Text>
+              <Text style={styles.helpSub}>Notre équipe vous répond rapidement.</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.helpBtn}
+              onPress={() => router.push({
+                pathname: '/(tabs)/support',
+                params: { category: 'Order / Delivery' },
+              })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.helpBtnText}>Contacter le support</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </Animated.ScrollView>
     </View>
   )
@@ -297,11 +327,52 @@ const styles = StyleSheet.create({
     elevation: 2,
     zIndex: 10,
   },
+
+  // Bloc d'aide / support
+  helpCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing[3],
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing[4],
+    marginTop: theme.spacing[2],
+    ...theme.shadows.card,
+  },
+  helpTitle: {
+    fontFamily: theme.typography.fontFamily.bold,
+    fontSize: theme.typography.size.base,
+    color: theme.colors.navy,
+  },
+  helpSub: {
+    fontFamily: theme.typography.fontFamily.regular,
+    fontSize: theme.typography.size.sm,
+    color: theme.colors.textLight,
+    marginTop: 2,
+  },
+  helpBtn: {
+    backgroundColor: theme.colors.bluePale,
+    borderRadius: theme.radius.pill,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  helpBtnText: {
+    fontFamily: theme.typography.fontFamily.bold,
+    fontSize: theme.typography.size.sm,
+    color: theme.colors.blue,
+  },
   pageTitle: {
     fontFamily: theme.typography.fontFamily.bold,
     fontSize: theme.typography.size['3xl'],
     color: theme.colors.navy,
     letterSpacing: -0.5,
+  },
+  ordersHeading: {
+    fontFamily: theme.typography.fontFamily.bold,
+    fontSize: theme.typography.size.sm,
+    color: theme.colors.textLight,
+    letterSpacing: 1.2,
+    marginTop: theme.spacing[2],
   },
 
   content: {
@@ -328,8 +399,8 @@ const styles = StyleSheet.create({
   // État vide
   emptyWrap: {
     alignItems: 'center',
-    paddingTop: theme.spacing[16],
-    gap: theme.spacing[3],
+    paddingVertical: theme.spacing[8],
+    gap: theme.spacing[2],
   },
   emptyCircle: {
     width: 120,

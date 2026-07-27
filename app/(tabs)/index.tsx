@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
 import ProgressRing from '../../components/ui/ProgressRing'
 import Logo from '../../components/ui/Logo'
+import SystemsProgress from '../../components/ui/SystemsProgress'
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -45,15 +46,6 @@ const getProgressColor = (p: number) =>
 const getProgressBg = (p: number) =>
   p >= 95 ? 'rgba(227,44,43,0.10)' : p >= 80 ? 'rgba(255,92,0,0.10)' : 'rgba(39,100,255,0.10)'
 
-const getOrderStatus = (status: string) => {
-  const s = (status ?? '').toLowerCase()
-  if (s.includes('deliver') || s.includes('livr'))
-    return { label: 'Livrée', color: theme.colors.success, bg: 'rgba(30,187,110,0.12)' }
-  if (s.includes('fulfill') || s.includes('ship') || s.includes('expéd'))
-    return { label: 'Expédiée', color: theme.colors.blue, bg: 'rgba(39,100,255,0.10)' }
-  return { label: 'À expédier', color: theme.colors.warning, bg: 'rgba(255,92,0,0.10)' }
-}
-
 const NOTIF_LAST_SEEN_KEY = 'notifications_last_seen'
 
 const NOTIF_TYPE_ICONS: Record<string, string> = {
@@ -69,13 +61,6 @@ const formatNotifDate = (iso: string | null) => {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
     + ' · '
     + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
-}
-
-const getSubStatus = (status: string) => {
-  const s = (status ?? '').toLowerCase()
-  if (s === 'active') return { label: 'Actif', color: theme.colors.success, pulse: true }
-  if (s === 'paused') return { label: 'Pausé', color: theme.colors.warning, pulse: false }
-  return { label: 'Annulé', color: theme.colors.error, pulse: false }
 }
 
 // ─── Petits composants animés ──────────────────────────────
@@ -96,35 +81,6 @@ function FadeIn({ index = 0, children, style }: { index?: number; children: Reac
     <Animated.View style={[style, { opacity, transform: [{ translateY: ty }] }]}>
       {children}
     </Animated.View>
-  )
-}
-
-function PulseDot({ color, pulse }: { color: string; pulse: boolean }) {
-  const anim = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    if (!pulse) return
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 1000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0, duration: 1000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
-    )
-    loop.start()
-    return () => loop.stop()
-  }, [pulse])
-
-  const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] })
-  const opacity = anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.4] })
-
-  return (
-    <Animated.View
-      style={[
-        styles.statusDot,
-        { backgroundColor: color },
-        pulse && { transform: [{ scale }], opacity },
-      ]}
-    />
   )
 }
 
@@ -216,8 +172,6 @@ export default function HomeScreen() {
   const [profile, setProfile] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [timers, setTimers] = useState<any[]>([])
-  const [order, setOrder] = useState<any>(null)
-  const [subscription, setSubscription] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
@@ -231,17 +185,13 @@ export default function HomeScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/(auth)/login'); return }
       setUserEmail(user.email ?? null)
-      const [{ data: prof }, { data: tim }, { data: subs }, { data: ords }, { data: notifs }] = await Promise.all([
+      const [{ data: prof }, { data: tim }, { data: notifs }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('cartridge_timers').select('*, filters(*)').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('subscriptions_cache').select('*').eq('user_id', user.id).eq('status', 'active').limit(1),
-        supabase.from('orders_cache').select('*').eq('user_id', user.id).order('shopify_created_at', { ascending: false }).limit(1),
         supabase.from('notification_logs').select('*').eq('user_id', user.id).order('sent_at', { ascending: false }).limit(20),
       ])
       setProfile(prof)
       setTimers(tim ?? [])
-      setSubscription(subs?.[0] ?? null)
-      setOrder(ords?.[0] ?? null)
 
       const notifList = notifs ?? []
       setNotifications(notifList)
@@ -287,9 +237,11 @@ export default function HomeScreen() {
     ? rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1)
     : null
 
-  const subStatus = subscription ? getSubStatus(subscription.status) : null
-  const orderStatus = order ? getOrderStatus(order.status) : null
   const waterIsPure = timers.length > 0 && timers.every(t => getProgress(t) < 80)
+  // Types de systèmes possédés (dérivés des filtres actifs) pour le bloc gamifié
+  const ownedSystemTypes = Array.from(
+    new Set(timers.map(t => t.filters?.filter_type).filter(Boolean)),
+  )
 
   return (
     <ScrollView
@@ -382,11 +334,6 @@ export default function HomeScreen() {
                             <Text style={styles.statValue}>{days}j</Text>
                             <Text style={styles.statLabel}>RESTANTS</Text>
                           </View>
-                          <View style={styles.statDivider} />
-                          <View style={styles.statCol}>
-                            <Text style={styles.statValue}>{t.expected_duration_days}j</Text>
-                            <Text style={styles.statLabel}>DURÉE TOT.</Text>
-                          </View>
                         </View>
 
                         {/* Bouton remplacé */}
@@ -405,62 +352,9 @@ export default function HomeScreen() {
             </View>
           </FadeIn>
 
-          {/* ── SECTION 3 : DEUX CARDS CÔTE À CÔTE ── */}
-          <FadeIn index={1} style={styles.row}>
-            {/* Abonnement */}
-            <TouchableOpacity
-              style={styles.miniCard}
-              onPress={() => router.push('/(tabs)/subscription')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.miniLabel}>MON ABONNEMENT</Text>
-              {subStatus ? (
-                <View style={styles.statusRow}>
-                  <PulseDot color={subStatus.color} pulse={subStatus.pulse} />
-                  <Text style={styles.statusText}>{subStatus.label}</Text>
-                </View>
-              ) : (
-                <Text style={styles.statusText}>Aucun</Text>
-              )}
-              <View style={styles.miniDivider} />
-              <Text style={styles.miniSub}>Prochain envoi</Text>
-              <Text style={styles.miniValue}>
-                {subscription?.next_delivery_date
-                  ? new Date(subscription.next_delivery_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
-                  : '—'}
-              </Text>
-              <Text style={styles.miniArrow}>→</Text>
-            </TouchableOpacity>
-
-            {/* Dernière commande */}
-            <TouchableOpacity
-              style={styles.miniCard}
-              onPress={() => router.push('/(tabs)/orders')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.miniLabel}>COMMANDE</Text>
-              {order ? (
-                <>
-                  <Text style={styles.statusText}>#{order.order_number}</Text>
-                  {orderStatus && (
-                    <View style={[styles.orderBadge, { backgroundColor: orderStatus.bg }]}>
-                      <Text style={[styles.orderBadgeText, { color: orderStatus.color }]}>
-                        {orderStatus.label}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.miniDivider} />
-                  <Text style={styles.miniSub}>
-                    {order.shopify_created_at
-                      ? new Date(order.shopify_created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
-                      : ''}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.statusText}>Aucune</Text>
-              )}
-              <Text style={styles.miniArrow}>→</Text>
-            </TouchableOpacity>
+          {/* ── SECTION 3 : SYSTÈMES PUURE (gamifié) ── */}
+          <FadeIn index={1} style={styles.section}>
+            <SystemsProgress ownedTypes={ownedSystemTypes} />
           </FadeIn>
 
           {/* ── SECTION 4 : BANNER EAU PURIFIÉE ── */}
@@ -594,6 +488,11 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing[4],
     marginTop: -theme.spacing[8],
   },
+  // Sections sous le hero : marge latérale cohérente + espacement vertical
+  section: {
+    marginHorizontal: theme.spacing[4],
+    marginTop: theme.spacing[5],
+  },
   heroCard: {
     backgroundColor: theme.colors.white,
     borderRadius: theme.radius['2xl'],
@@ -709,71 +608,6 @@ const styles = StyleSheet.create({
     gap: theme.spacing[3],
     paddingHorizontal: theme.spacing[4],
     marginTop: theme.spacing[4],
-  },
-  miniCard: {
-    flex: 1,
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.radius.xl,
-    padding: theme.spacing[4],
-    ...theme.shadows.light,
-  },
-  miniLabel: {
-    fontFamily: theme.typography.fontFamily.semiBold,
-    fontSize: 10,
-    color: theme.colors.textLight,
-    letterSpacing: 1,
-    marginBottom: theme.spacing[2],
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing[2],
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: theme.radius.full,
-  },
-  statusText: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.base,
-    color: theme.colors.navy,
-  },
-  miniDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing[3],
-  },
-  miniSub: {
-    fontFamily: theme.typography.fontFamily.regular,
-    fontSize: theme.typography.size.xs,
-    color: theme.colors.textLight,
-  },
-  miniValue: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.navy,
-    marginTop: 2,
-  },
-  miniArrow: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.md,
-    color: theme.colors.blue,
-    // Ancrée en bas pour que les flèches des deux mini-cards soient alignées
-    marginTop: 'auto',
-    paddingTop: theme.spacing[2],
-  },
-  orderBadge: {
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: theme.spacing[2],
-    paddingVertical: 3,
-    alignSelf: 'flex-start',
-    marginTop: theme.spacing[2],
-  },
-  orderBadgeText: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: 10,
-    letterSpacing: 0.5,
   },
 
   // Banner pureté

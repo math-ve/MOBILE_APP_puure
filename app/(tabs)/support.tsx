@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useLocalSearchParams } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
@@ -228,6 +229,8 @@ function SelectSheet({ visible, title, options, selectedValue, onSelect, onClose
 export default function SupportScreen() {
   const insets = useSafeAreaInsets()
   const { showToast } = useToast()
+  // Catégorie éventuellement pré-sélectionnée via la navigation (ex: depuis Commandes)
+  const params = useLocalSearchParams<{ category?: string }>()
 
   const [email, setEmail] = useState('')
   const [groupValue, setGroupValue] = useState<string | null>(null)
@@ -244,6 +247,14 @@ export default function SupportScreen() {
       if (user?.email) setEmail(user.email)
     })
   }, [])
+
+  // Pré-sélectionne la catégorie passée en paramètre de navigation
+  useEffect(() => {
+    if (params.category && CATEGORIES.some(c => c.value === params.category)) {
+      setGroupValue(params.category)
+      setSubValue(null)
+    }
+  }, [params.category])
 
   const selectedGroup = CATEGORIES.find(c => c.value === groupValue) ?? null
   const selectedSub = selectedGroup?.subs.find(s => s.value === subValue) ?? null

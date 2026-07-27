@@ -26,20 +26,6 @@ function HomeIcon({ color, size }: IconProps) {
   )
 }
 
-function BoxIcon({ color, size }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8ZM4 8l2-4h12l2 4M4 12h16"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  )
-}
-
 function RefreshIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -86,8 +72,7 @@ function HeadphonesIcon({ color, size }: IconProps) {
 
 const TABS: Record<string, { label: string; Icon: (p: IconProps) => React.JSX.Element }> = {
   index: { label: 'Accueil', Icon: HomeIcon },
-  orders: { label: 'Commandes', Icon: BoxIcon },
-  subscription: { label: 'Abonnement', Icon: RefreshIcon },
+  orders: { label: 'Abonnements', Icon: RefreshIcon },
   filters: { label: 'Filtres', Icon: DropIcon },
   support: { label: 'Support', Icon: HeadphonesIcon },
 }

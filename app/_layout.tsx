@@ -45,15 +45,12 @@ async function registerPushToken(userId: string) {
   if (!Device.isDevice) return
 
   try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync()
-    let finalStatus = existingStatus
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync()
-      finalStatus = status
-    }
-
-    if (finalStatus !== 'granted') return
+    // On NE demande PAS la permission ici : c'est l'écran d'onboarding
+    // (notifications-intro) qui gère la demande, contexte à l'appui.
+    // Ici on se contente d'enregistrer le token si l'autorisation existe déjà
+    // (ex: reconnexion d'un utilisateur ayant déjà accepté).
+    const { status } = await Notifications.getPermissionsAsync()
+    if (status !== 'granted') return
 
     const token = (await Notifications.getExpoPushTokenAsync({
       projectId: 'c1ed5ce2-a996-401f-a527-1f1705efef9e',
@@ -71,8 +68,11 @@ async function registerPushToken(userId: string) {
 
 // Navigue vers l'écran ciblé par la notification (data.screen envoyé par le backend)
 function handleNotificationNavigation(data: Record<string, unknown> | undefined) {
-  const screen = data?.screen
+  let screen = data?.screen
   if (typeof screen === 'string' && screen.length > 0) {
+    // L'onglet Abonnement a fusionné dans Livraisons (orders). On remappe les
+    // anciennes notifications déjà envoyées qui pointent encore vers /subscription.
+    if (screen === '/(tabs)/subscription') screen = '/(tabs)/orders'
     router.push(screen as any)
   }
 }

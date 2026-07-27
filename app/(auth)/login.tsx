@@ -7,8 +7,10 @@ import { VideoView, useVideoPlayer } from 'expo-video'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
 import Logo from '../../components/ui/Logo'
+import { NOTIF_INTRO_SEEN_KEY } from './notifications-intro'
 
 const { height } = Dimensions.get('window')
 
@@ -66,7 +68,10 @@ export default function LoginScreen() {
       const data = await res.json()
       if (data.success && data.access_token) {
         await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token })
-        router.replace('/(tabs)')
+        // Au tout premier login, on montre l'écran d'explication des notifications
+        // avant de demander la permission système. Ensuite on va droit aux tabs.
+        const seen = await AsyncStorage.getItem(NOTIF_INTRO_SEEN_KEY)
+        router.replace(seen ? '/(tabs)' : '/(auth)/notifications-intro')
       } else setError(data.error ?? 'Code invalide')
     } catch { setError('Erreur de vérification.') }
     finally { setLoading(false) }
