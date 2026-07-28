@@ -665,7 +665,7 @@ export default function SubscriptionDetailScreen() {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/get-subscription-detail`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ contractId, customerId }),
+      body: JSON.stringify({ contractId, customerId, userId: session.user.id }),
     })
     const json = await res.json()
     setUpcomingOrders(json.upcomingOrders ?? [])

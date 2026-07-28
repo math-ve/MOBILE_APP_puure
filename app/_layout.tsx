@@ -4,6 +4,7 @@ import { Stack, router } from 'expo-router'
 import * as Linking from 'expo-linking'
 import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
+import * as Localization from 'expo-localization'
 import * as SplashScreen from 'expo-splash-screen'
 import {
   useFonts,
@@ -63,6 +64,20 @@ async function registerPushToken(userId: string) {
   } catch (e) {
     // Expo Go ne supporte plus les push remote (SDK 53+) — ne bloque pas le login
     if (__DEV__) console.warn('Push token registration failed:', e)
+  }
+}
+
+// Langues supportées côté notifications (cf. notification_templates.translations).
+// Toute autre langue détectée retombe sur le français, comme le reste de l'app.
+const SUPPORTED_LANGUAGES = ['fr', 'nl', 'en']
+
+async function syncLanguage(userId: string) {
+  try {
+    const detected = Localization.getLocales()[0]?.languageCode?.toLowerCase()
+    const language = SUPPORTED_LANGUAGES.includes(detected ?? '') ? detected : 'fr'
+    await supabase.from('profiles').update({ language }).eq('id', userId)
+  } catch (e) {
+    if (__DEV__) console.warn('Language sync failed:', e)
   }
 }
 
@@ -146,6 +161,7 @@ export default function RootLayout() {
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         registerPushToken(session.user.id)
+        syncLanguage(session.user.id)
         triggerSyncs(session.user.id, session.access_token)
       }
     })

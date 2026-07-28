@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -9,7 +11,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { contractId, customerId } = await req.json();
+    const { contractId, customerId, userId } = await req.json();
 
     if (!contractId) {
       return new Response(JSON.stringify({ error: "contractId requis" }), {
@@ -82,6 +84,17 @@ Deno.serve(async (req) => {
     // Strip noisy GraphQL meta-fields from shipping address
     const rawAddr = contractData?.deliveryMethod?.address ?? null;
     const addr = rawAddr ? (({ __typename, countryCodeV2, ...rest }) => rest)(rawAddr) : null;
+
+    // Dérive profiles.country depuis l'adresse de livraison (best-effort).
+    const countryCode: string | null = rawAddr?.countryCodeV2?.code ?? null;
+    if (userId && countryCode) {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { error } = await supabase.from("profiles").update({ country: countryCode }).eq("id", userId);
+      if (error) console.log("Country sync failed:", error.message);
+    }
 
     // Prefer non-revocable (primary) card, fall back to first non-revoked
     const nodes: any[] = pmData?.nodes ?? [];
