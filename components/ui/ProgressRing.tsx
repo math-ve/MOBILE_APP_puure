@@ -36,9 +36,14 @@ export default function ProgressRing({
     }).start()
   }, [progress])
 
+  // L'anneau se remplit proportionnellement à animatedProgress (0 → progress).
+  // L'interpolation mappe 0 % → offset plein (arc, rien de dessiné) et
+  // 100 % → offset 0 (arc entier dessiné). Auparavant `progress` était
+  // appliqué une 2e fois dans l'outputRange, ce qui remplissait l'anneau à
+  // progress² (ex: 74 % s'affichait à ~55 %).
   const strokeDashoffset = animatedProgress.interpolate({
     inputRange: [0, 100],
-    outputRange: [arc, arc - (arc * progress) / 100],
+    outputRange: [arc, 0],
   })
 
   const getColor = (pct: number) => {
