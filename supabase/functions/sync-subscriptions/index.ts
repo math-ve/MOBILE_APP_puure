@@ -107,6 +107,34 @@ Deno.serve(async (req) => {
 
     if (upsertError) throw new Error(`Upsert error: ${upsertError.message}`);
 
+    // Dérive profiles.country depuis l'adresse de livraison du 1er contrat (best-effort,
+    // même source que get-subscription-detail : subscription-contracts/contract-external).
+    try {
+      const firstContractId = subscriptions[0]?.subscriptionContractId;
+      if (firstContractId) {
+        const contractRes = await fetch(
+          `https://subscription-admin.appstle.com/api/external/v2/subscription-contracts/contract-external/${firstContractId}`,
+          { headers: { "X-API-Key": apiKey, "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" } },
+        );
+        const contractText = await contractRes.text();
+        if (contractRes.ok && !contractText.trimStart().startsWith("<")) {
+          const contractData = JSON.parse(contractText);
+          // countryCode/countryCodeV2 sont déjà des strings ISO alpha-2 ("BE") dans ce payload
+          // Appstle — pas un objet GraphQL {code, __typename} comme dans d'autres API Shopify.
+          const countryCode: string | null = contractData?.deliveryMethod?.address?.countryCode ?? null;
+          if (countryCode) {
+            const { error: countryError } = await supabase
+              .from("profiles")
+              .update({ country: countryCode })
+              .eq("id", user_id);
+            if (countryError) console.log("Country sync failed:", countryError.message);
+          }
+        }
+      }
+    } catch (e) {
+      console.log("Country derivation failed:", e);
+    }
+
     console.log("Done, synced:", rows.length);
     return new Response(JSON.stringify({ success: true, synced: rows.length }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },

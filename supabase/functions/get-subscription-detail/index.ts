@@ -86,7 +86,8 @@ Deno.serve(async (req) => {
     const addr = rawAddr ? (({ __typename, countryCodeV2, ...rest }) => rest)(rawAddr) : null;
 
     // Dérive profiles.country depuis l'adresse de livraison (best-effort).
-    const countryCode: string | null = rawAddr?.countryCodeV2?.code ?? null;
+    // countryCode est déjà une string ISO alpha-2 ("BE") dans ce payload Appstle.
+    const countryCode: string | null = rawAddr?.countryCode ?? null;
     if (userId && countryCode) {
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,

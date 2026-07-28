@@ -69,7 +69,7 @@ async function registerPushToken(userId: string) {
 
 // Langues supportées côté notifications (cf. notification_templates.translations).
 // Toute autre langue détectée retombe sur le français, comme le reste de l'app.
-const SUPPORTED_LANGUAGES = ['fr', 'nl', 'en']
+const SUPPORTED_LANGUAGES = ['fr', 'nl', 'en', 'de']
 
 async function syncLanguage(userId: string) {
   try {
