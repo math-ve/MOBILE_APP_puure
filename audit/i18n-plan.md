@@ -88,15 +88,43 @@ Pour chaque écran : `t('ns:key')`, interpolation `t('home:greeting', { name })`
 - Option « Automatique » (efface le choix manuel, revient à la détection device)
 - Prévoir la place pour futurs réglages (notifs, déconnexion, liens légaux)
 
-### 5. Config stores (~0.5 j)
-- `app.json` : `ios.infoPlist.CFBundleLocalizations = ["fr","en","de"]`
-- Traduire `store/fiche-store.md` (nom, sous-titre, description, mots-clés ASO) en EN + DE
-- Vérifier `notification_templates.translations` en base : les 3 langues présentes (sinon notifs DE/EN → fallback FR)
+### 5. Config stores (~0.5 j) — FAIT
+- `app.json` : `CFBundleLocalizations = ["fr","en","de"]` + `CFBundleDevelopmentRegion` ✅
+- `store/fiche-store.md` : sections EN + DE ajoutées (nom, sous-titre, description longue, mots-clés ASO) ✅
+- ⚠️ Notifications push NON localisées — hors scope de ce lot. Les crons
+  (`notify-cartridge`, `notify-renewal`, `sync-orders`…) **codent les textes FR
+  en dur** et ne lisent ni `profiles.language` ni `notification_templates`.
+  Chantier backend séparé : faire lire `profiles.language` aux edge functions,
+  remplir `notification_templates.translations` (en/de) pour les 9 clés, et
+  brancher les fonctions dessus.
 
-### 6. QA (~0.5 j)
+### 6. QA (~0.5 j) — À FAIRE
 - Parcours complet des 3 langues sur simulateur
 - Troncatures : l'allemand est ~30 % plus long → vérifier boutons, badges, onglets
 - Dates, devises, pluriels
+- Vérifier le sélecteur Réglages + bascule automatique/manuelle
+
+## État d'avancement (2026-09-09)
+
+Branche `feat/i18n` — 9 commits :
+| Lot | Statut |
+|---|---|
+| Socle i18n (i18next, format, statuses, check:i18n) | ✅ |
+| auth (login, notifications-intro) | ✅ |
+| common + composants (TabBar, SystemsProgress) | ✅ |
+| home | ✅ |
+| orders + SubscriptionsSection | ✅ |
+| filters (+ modal ajout) | ✅ |
+| tracking (statuts, jalons, events transporteur) | ✅ |
+| support (+ ~60 catégories Zendesk) | ✅ |
+| subscription-detail (+ 4 bottom-sheets) | ✅ |
+| Écran Réglages + sélecteur langue | ✅ |
+| Config stores (app.json + fiche-store EN/DE) | ✅ |
+| Relecture EN/DE par Mathieu | à faire |
+| QA 3 langues sur simulateur | à faire |
+| Notifications push localisées (backend) | hors scope, à planifier |
+| Merge feat/i18n → main, build EAS iOS, submit TestFlight | à faire |
+| Déployer edge functions du commit b11a783 | à faire |
 
 ## Estimation totale : ~8 jours de dev
 

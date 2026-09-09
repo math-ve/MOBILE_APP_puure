@@ -18,7 +18,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.puurefilters.mobile",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleLocalizations": ["fr", "en", "de"],
+        "CFBundleDevelopmentRegion": "fr"
       }
     },
     "android": {

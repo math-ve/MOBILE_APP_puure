@@ -72,6 +72,156 @@ Politique de confidentialité : https://puurefilters.com/policies/privacy-policy
 filtre,eau,cartouche,robinet,douche,calcaire,abonnement,purification,puure,suivi
 ```
 
+---
+
+## Google Play & App Store — Texts EN
+
+### App name (30 chars max)
+```
+Puure Filters
+```
+
+### Short description / Subtitle (80 chars Google · 30 chars Apple)
+
+**Google Play (80 max):**
+```
+Track your cartridges, manage your Puure subscriptions and deliveries.
+```
+
+**App Store subtitle (30 max):**
+```
+Your pure water, in control
+```
+
+### Long description (4000 chars max — both stores)
+
+```
+The official Puure Filters app — for pure water, without thinking about it.
+
+Exclusively for Puure customers, the app supports you day to day in managing
+your water filters, subscriptions and deliveries.
+
+💧 TRACK YOUR CARTRIDGES IN REAL TIME
+• Register every filter installed in your home (tap or shower)
+• A visual wear gauge shows exactly where each cartridge stands:
+  % used, days left, total lifespan
+• Get an alert at 80% then 95% wear — you'll never exceed a cartridge's
+  lifespan again
+• One tap to log a replacement and start fresh
+
+🔄 MANAGE YOUR SUBSCRIPTION EFFORTLESSLY
+• See your next delivery, frequency and amount
+• Pause, resume or cancel on your own
+• Change the frequency (1, 2, 3 or 6 months), the delivery address
+  or apply a promo code straight from the app
+• Need a delivery sooner? Order now or reschedule the next one
+  for the date of your choice
+• Automatic reminder 2 days before each renewal
+
+📦 FOLLOW YOUR ORDERS CLOSELY
+• Your full order history, synced automatically
+• Detailed step-by-step parcel tracking
+• A notification as soon as your order ships
+
+🔔 USEFUL NOTIFICATIONS, NEVER INTRUSIVE
+• Cartridge to replace, upcoming renewal, parcel shipped
+• A notification centre to find everything in one place
+
+🤝 BUILT-IN SUPPORT
+• Contact our team directly from the app
+• A guided form by category for a faster answer
+
+SIMPLE, SECURE SIGN-IN
+No password to remember: enter your Puure customer email,
+receive a 6-digit code, and that's it.
+
+—
+The app is exclusively for Puure Filters customers.
+Questions? customercare@puurefilters.com
+Privacy Policy: https://puurefilters.com/policies/privacy-policy
+```
+
+### App Store keywords (100 chars max)
+```
+filter,water,cartridge,tap,shower,limescale,subscription,purification,puure,tracking
+```
+
+---
+
+## Google Play & App Store — Texte DE
+
+### App-Name (max. 30 Zeichen)
+```
+Puure Filters
+```
+
+### Kurzbeschreibung / Untertitel (80 Zeichen Google · 30 Zeichen Apple)
+
+**Google Play (max. 80):**
+```
+Kartuschen verfolgen, Puure-Abos und Lieferungen verwalten.
+```
+
+**App Store Untertitel (max. 30):**
+```
+Dein reines Wasser im Griff
+```
+
+### Lange Beschreibung (max. 4000 Zeichen — für beide Stores)
+
+```
+Die offizielle Puure-Filters-App — für reines Wasser, ohne daran zu denken.
+
+Exklusiv für Puure-Kunden begleitet dich die App im Alltag bei der
+Verwaltung deiner Wasserfilter, Abonnements und Lieferungen.
+
+💧 VERFOLGE DEINE KARTUSCHEN IN ECHTZEIT
+• Erfasse jeden bei dir installierten Filter (Wasserhahn oder Dusche)
+• Eine visuelle Verschleißanzeige zeigt genau, wie es um jede Kartusche
+  steht: % verbraucht, verbleibende Tage, Gesamtlebensdauer
+• Erhalte eine Warnung bei 80 % und dann bei 95 % Verschleiß — du
+  überschreitest die Lebensdauer einer Kartusche nie wieder
+• Ein Fingertipp genügt, um einen Wechsel zu erfassen und neu zu starten
+
+🔄 VERWALTE DEIN ABONNEMENT MÜHELOS
+• Sieh deine nächste Lieferung, Häufigkeit und den Betrag
+• Pausiere, setze fort oder kündige eigenständig
+• Ändere die Häufigkeit (1, 2, 3 oder 6 Monate), die Lieferadresse
+  oder wende einen Gutscheincode direkt in der App an
+• Du brauchst eine Lieferung früher? Bestelle sofort oder verschiebe
+  die nächste auf ein Datum deiner Wahl
+• Automatische Erinnerung 2 Tage vor jeder Verlängerung
+
+📦 VERFOLGE DEINE BESTELLUNGEN GENAU
+• Dein gesamter Bestellverlauf, automatisch synchronisiert
+• Detaillierte Sendungsverfolgung Schritt für Schritt
+• Eine Benachrichtigung, sobald deine Bestellung versendet wird
+
+🔔 NÜTZLICHE BENACHRICHTIGUNGEN, NIE AUFDRINGLICH
+• Kartusche zu wechseln, anstehende Verlängerung, Paket versendet
+• Ein Benachrichtigungscenter, um alles an einem Ort zu finden
+
+🤝 INTEGRIERTER SUPPORT
+• Kontaktiere unser Team direkt aus der App
+• Ein geführtes Formular nach Kategorie für eine schnellere Antwort
+
+EINFACHE UND SICHERE ANMELDUNG
+Kein Passwort zu merken: Gib deine Puure-Kunden-E-Mail-Adresse ein,
+erhalte einen 6-stelligen Code, und das war's.
+
+—
+Die App ist exklusiv für Puure-Filters-Kunden.
+Fragen? customercare@puurefilters.com
+Datenschutzerklärung: https://puurefilters.com/policies/privacy-policy
+```
+
+### App Store Keywords (max. 100 Zeichen)
+```
+Filter,Wasser,Kartusche,Wasserhahn,Dusche,Kalk,Abo,Wasserfilter,Puure,Sendungsverfolgung
+```
+
+---
+
 ## Métadonnées communes
 
 | Champ | Valeur |
