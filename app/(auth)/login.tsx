@@ -7,6 +7,7 @@ import { VideoView, useVideoPlayer } from 'expo-video'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
 import Logo from '../../components/ui/Logo'
@@ -18,6 +19,7 @@ const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bHFkcnJsZ2dvbGdkc3Nkd29oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2ODkyNjIsImV4cCI6MjA5NTI2NTI2Mn0.859w5rLfcdZWG_vhk0tQM0cqcwRluIFlHjLIsM3Sr5o'
 
 export default function LoginScreen() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const [email, setEmail] = useState('')
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
@@ -40,7 +42,7 @@ export default function LoginScreen() {
   }
 
   const handleSendCode = async () => {
-    if (!email.includes('@')) { setError('Email invalide'); return }
+    if (!email.includes('@')) { setError(t('auth:emailInvalid')); return }
     setLoading(true); setError('')
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/magic-link`, {
@@ -50,14 +52,14 @@ export default function LoginScreen() {
       })
       const data = await res.json()
       if (data.success) setStep('otp')
-      else setError(data.error ?? 'Une erreur est survenue.')
-    } catch { setError('Impossible de contacter le serveur.') }
+      else setError(data.error ?? t('auth:genericError'))
+    } catch { setError(t('auth:serverUnreachable')) }
     finally { setLoading(false) }
   }
 
   const handleVerifyCode = async () => {
     const fullCode = otpValues.join('')
-    if (fullCode.length !== 6) { setError('Code incomplet'); return }
+    if (fullCode.length !== 6) { setError(t('auth:codeIncomplete')); return }
     setLoading(true); setError('')
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/magic-link`, {
@@ -72,8 +74,8 @@ export default function LoginScreen() {
         // avant de demander la permission système. Ensuite on va droit aux tabs.
         const seen = await AsyncStorage.getItem(NOTIF_INTRO_SEEN_KEY)
         router.replace(seen ? '/(tabs)' : '/(auth)/notifications-intro')
-      } else setError(data.error ?? 'Code invalide')
-    } catch { setError('Erreur de vérification.') }
+      } else setError(data.error ?? t('auth:codeInvalid'))
+    } catch { setError(t('auth:verificationError')) }
     finally { setLoading(false) }
   }
 
@@ -128,14 +130,12 @@ export default function LoginScreen() {
 
             {step === 'email' ? (
               <>
-                <Text style={styles.title}>Connexion</Text>
-                <Text style={styles.subtitle}>
-                  Entrez votre email pour recevoir{'\n'}votre code de connexion
-                </Text>
+                <Text style={styles.title}>{t('auth:loginTitle')}</Text>
+                <Text style={styles.subtitle}>{t('auth:loginSubtitle')}</Text>
 
                 <TextInput
                   style={styles.input}
-                  placeholder="votre@email.com"
+                  placeholder={t('auth:emailPlaceholder')}
                   placeholderTextColor="rgba(35,48,86,0.35)"
                   value={email}
                   onChangeText={setEmail}
@@ -156,17 +156,17 @@ export default function LoginScreen() {
                   activeOpacity={0.85}
                 >
                   <Text style={styles.btnLimeText}>
-                    {loading ? 'Envoi en cours...' : 'Recevoir le code'}
+                    {loading ? t('auth:sending') : t('auth:sendCode')}
                   </Text>
                 </TouchableOpacity>
 
-                <Text style={styles.footer}>🔒 Accès sécurisé · Clients Puure uniquement</Text>
+                <Text style={styles.footer}>{t('auth:securedAccess')}</Text>
               </>
             ) : (
               <>
-                <Text style={styles.title}>Vérification</Text>
+                <Text style={styles.title}>{t('auth:verifyTitle')}</Text>
                 <Text style={styles.subtitle}>
-                  Code envoyé à{'\n'}
+                  {t('auth:codeSentTo')}
                   <Text style={{ color: '#2764FF' }}>{email}</Text>
                 </Text>
 
@@ -195,7 +195,7 @@ export default function LoginScreen() {
                   activeOpacity={0.85}
                 >
                   <Text style={styles.btnLimeText}>
-                    {loading ? 'Vérification...' : 'Se connecter'}
+                    {loading ? t('auth:verifying') : t('auth:signIn')}
                   </Text>
                 </TouchableOpacity>
 
@@ -203,7 +203,7 @@ export default function LoginScreen() {
                   onPress={() => { setStep('email'); setOtpValues(['', '', '', '', '', '']); setError('') }}
                   style={{ marginTop: 12, alignItems: 'center' }}
                 >
-                  <Text style={styles.backLink}>← Changer d'adresse email</Text>
+                  <Text style={styles.backLink}>{t('auth:changeEmail')}</Text>
                 </TouchableOpacity>
               </>
             )}

@@ -1,10 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Platform, AppState } from 'react-native'
 import { Stack, router } from 'expo-router'
 import * as Linking from 'expo-linking'
 import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
-import * as Localization from 'expo-localization'
 import * as SplashScreen from 'expo-splash-screen'
 import {
   useFonts,
@@ -15,6 +14,7 @@ import {
 } from '@expo-google-fonts/instrument-sans'
 import { supabase } from '../lib/supabase'
 import { ToastProvider } from '../hooks/useToast'
+import { initI18n, hasManualLanguage, getDeviceLanguage, i18n } from '../lib/i18n'
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bHFkcnJsZ2dvbGdkc3Nkd29oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2ODkyNjIsImV4cCI6MjA5NTI2NTI2Mn0.859w5rLfcdZWG_vhk0tQM0cqcwRluIFlHjLIsM3Sr5o'
@@ -67,14 +67,16 @@ async function registerPushToken(userId: string) {
   }
 }
 
-// Langues supportées côté notifications (cf. notification_templates.translations).
-// Toute autre langue détectée retombe sur le français, comme le reste de l'app.
-const SUPPORTED_LANGUAGES = ['fr', 'nl', 'en', 'de']
-
+/**
+ * Répercute la langue effective de l'app dans profiles.language
+ * (utilisé par les notifications push). Respecte le choix manuel : si
+ * l'utilisateur n'a rien fixé, on prend la langue de l'appareil telle que
+ * i18n l'a résolue.
+ */
 async function syncLanguage(userId: string) {
   try {
-    const detected = Localization.getLocales()[0]?.languageCode?.toLowerCase()
-    const language = SUPPORTED_LANGUAGES.includes(detected ?? '') ? detected : 'fr'
+    const manual = await hasManualLanguage()
+    const language = manual ? i18n.language : getDeviceLanguage()
     await supabase.from('profiles').update({ language }).eq('id', userId)
   } catch (e) {
     if (__DEV__) console.warn('Language sync failed:', e)
@@ -112,10 +114,15 @@ export default function RootLayout() {
     InstrumentSans_600SemiBold,
     InstrumentSans_700Bold,
   })
+  const [i18nReady, setI18nReady] = useState(false)
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync()
-  }, [fontsLoaded])
+    initI18n().then(() => setI18nReady(true))
+  }, [])
+
+  useEffect(() => {
+    if (fontsLoaded && i18nReady) SplashScreen.hideAsync()
+  }, [fontsLoaded, i18nReady])
 
   useEffect(() => {
     // Setup notifications : channel Android + badge à zéro à chaque ouverture
@@ -174,7 +181,7 @@ export default function RootLayout() {
     }
   }, [])
 
-  if (!fontsLoaded) return null
+  if (!fontsLoaded || !i18nReady) return null
 
   return (
     <ToastProvider>
@@ -183,6 +190,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="subscription-detail" />
         <Stack.Screen name="tracking" />
+        <Stack.Screen name="settings" />
       </Stack>
     </ToastProvider>
   )

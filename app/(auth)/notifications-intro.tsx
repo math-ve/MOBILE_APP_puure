@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -13,16 +14,17 @@ import Logo from '../../components/ui/Logo'
 export const NOTIF_INTRO_SEEN_KEY = 'notifications_intro_seen'
 const EAS_PROJECT_ID = 'c1ed5ce2-a996-401f-a527-1f1705efef9e'
 
-// Bénéfices affichés — centrés sur l'utilité concrète des rappels
-const BENEFITS = [
-  { icon: '💧', title: 'Rappel de cartouche', text: 'Sachez exactement quand remplacer votre cartouche, ni trop tôt ni trop tard.' },
-  { icon: '🔄', title: 'Renouvellement à venir', text: 'Un rappel avant chaque renouvellement de votre abonnement.' },
-  { icon: '📦', title: 'Suivi de commande', text: 'Soyez prévenu dès que votre commande est expédiée.' },
-]
-
 export default function NotificationsIntroScreen() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const [loading, setLoading] = useState(false)
+
+  // Bénéfices affichés — centrés sur l'utilité concrète des rappels
+  const BENEFITS = [
+    { icon: '💧', title: t('auth:notifBenefit1Title'), text: t('auth:notifBenefit1Text') },
+    { icon: '🔄', title: t('auth:notifBenefit2Title'), text: t('auth:notifBenefit2Text') },
+    { icon: '📦', title: t('auth:notifBenefit3Title'), text: t('auth:notifBenefit3Text') },
+  ]
 
   const finish = async () => {
     await AsyncStorage.setItem(NOTIF_INTRO_SEEN_KEY, 'true')
@@ -70,10 +72,8 @@ export default function NotificationsIntroScreen() {
           <Text style={styles.bellEmoji}>🔔</Text>
         </View>
 
-        <Text style={styles.title}>Ne manquez plus rien</Text>
-        <Text style={styles.subtitle}>
-          Activez les notifications pour tirer le meilleur de votre eau filtrée.
-        </Text>
+        <Text style={styles.title}>{t('auth:notifTitle')}</Text>
+        <Text style={styles.subtitle}>{t('auth:notifSubtitle')}</Text>
 
         <View style={styles.benefits}>
           {BENEFITS.map(b => (
@@ -98,12 +98,12 @@ export default function NotificationsIntroScreen() {
           activeOpacity={0.85}
         >
           <Text style={styles.btnPrimaryText}>
-            {loading ? 'Activation…' : 'Activer les notifications'}
+            {loading ? t('auth:notifEnabling') : t('auth:notifEnable')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={finish} disabled={loading} activeOpacity={0.6}>
-          <Text style={styles.skip}>Plus tard</Text>
+          <Text style={styles.skip}>{t('auth:notifLater')}</Text>
         </TouchableOpacity>
       </View>
     </View>
