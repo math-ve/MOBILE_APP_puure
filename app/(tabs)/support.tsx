@@ -6,9 +6,11 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import Svg, { Path } from 'react-native-svg'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
+import i18n from '../../lib/i18n'
 import { useToast } from '../../hooks/useToast'
 import Logo from '../../components/ui/Logo'
 
@@ -16,132 +18,140 @@ import Logo from '../../components/ui/Logo'
 const WORKER_URL = 'https://lively-sound-95c2.mathieu-vaneynde.workers.dev/'
 const SUPPORT_EMAIL = 'customercare@puurefilters.com'
 
-// ─── Catégories — valeurs machine identiques au site (routing Zendesk) ───
+// ─── Catégories ────────────────────────────────────────────
+// `value` : valeur machine envoyée à Zendesk (routing) — NE PAS traduire.
+// `catKey` / sous-valeurs : clés i18n (support:cat.* / support:sub.*).
 
-interface SubCategory { label: string; value: string }
-interface Category { value: string; label: string; subs: SubCategory[] }
+interface Category { value: string; catKey: string; subs: string[] }
 
 const CATEGORIES: Category[] = [
   {
     value: 'Order / Delivery',
-    label: 'Commande / Livraison',
+    catKey: 'order_delivery',
     subs: [
-      { label: 'Commande non reçue', value: 'order_/_delivery__order_not_received' },
-      { label: 'Livraison retardée', value: 'order_/_delivery__delivery_delayed' },
-      { label: 'Problème de suivi', value: 'order_/_delivery__tracking_issue' },
-      { label: 'Mauvais article reçu', value: 'order_/_delivery__wrong_item_received' },
-      { label: 'Article manquant', value: 'order_/_delivery__missing_item' },
-      { label: 'Livraison partielle', value: 'order_/_delivery__partial_delivery' },
-      { label: "Problème d'adresse", value: 'order_/_delivery__address_issue' },
+      'order_/_delivery__order_not_received',
+      'order_/_delivery__delivery_delayed',
+      'order_/_delivery__tracking_issue',
+      'order_/_delivery__wrong_item_received',
+      'order_/_delivery__missing_item',
+      'order_/_delivery__partial_delivery',
+      'order_/_delivery__address_issue',
     ],
   },
   {
     value: 'Adapter / Compatibility',
-    label: 'Adaptateur / Compatibilité',
+    catKey: 'adapter_compatibility',
     subs: [
-      { label: 'Mauvais adaptateur', value: 'adapter_/_compatibility__wrong_adapter_needed' },
-      { label: 'Adaptateur manquant', value: 'adapter_/_compatibility__adapter_missing' },
-      { label: 'Robinet non compatible', value: 'adapter_/_compatibility__faucet_not_compatible' },
-      { label: 'Problème de filetage', value: 'adapter_/_compatibility__thread_size_issue' },
-      { label: 'Problème de mesure', value: 'adapter_/_compatibility__measurement_issue' },
-      { label: 'Suivi commande adaptateur', value: 'adapter_/_compatibility__adapter_order_follow-up' },
+      'adapter_/_compatibility__wrong_adapter_needed',
+      'adapter_/_compatibility__adapter_missing',
+      'adapter_/_compatibility__faucet_not_compatible',
+      'adapter_/_compatibility__thread_size_issue',
+      'adapter_/_compatibility__measurement_issue',
+      'adapter_/_compatibility__adapter_order_follow-up',
     ],
   },
   {
     value: 'Installation / Setup',
-    label: 'Installation / Montage',
+    catKey: 'installation_setup',
     subs: [
-      { label: "Aide à l'installation", value: 'installation_/_setup__installation_help' },
-      { label: 'Instructions de montage', value: 'installation_/_setup__setup_instructions' },
-      { label: 'Impossible de fixer le filtre', value: 'installation_/_setup__cannot_attach_filter' },
-      { label: 'Fuite après installation', value: 'installation_/_setup__leak_after_installation' },
-      { label: 'Mauvais assemblage', value: 'installation_/_setup__wrong_assembly' },
-      { label: 'Robinet qui goutte après montage', value: 'installation_/_setup__tap_dripping_after_setup' },
+      'installation_/_setup__installation_help',
+      'installation_/_setup__setup_instructions',
+      'installation_/_setup__cannot_attach_filter',
+      'installation_/_setup__leak_after_installation',
+      'installation_/_setup__wrong_assembly',
+      'installation_/_setup__tap_dripping_after_setup',
     ],
   },
   {
     value: 'Product issue',
-    label: 'Problème produit',
+    catKey: 'product_issue',
     subs: [
-      { label: 'Produit défectueux', value: 'product_issue__defective_product' },
-      { label: 'Endommagé à la réception', value: 'product_issue__damaged_on_arrival' },
-      { label: 'Produit ne fonctionne pas', value: 'product_issue__product_not_working' },
-      { label: 'Pièce cassée', value: 'product_issue__broken_part' },
-      { label: 'Problème couvercle inox', value: 'product_issue__stainless_steel_cover_issue' },
-      { label: 'Goutte / fuite', value: 'product_issue__dripping_/_leakage' },
-      { label: 'Connexion fragile', value: 'product_issue__weak_connection' },
+      'product_issue__defective_product',
+      'product_issue__damaged_on_arrival',
+      'product_issue__product_not_working',
+      'product_issue__broken_part',
+      'product_issue__stainless_steel_cover_issue',
+      'product_issue__dripping_/_leakage',
+      'product_issue__weak_connection',
     ],
   },
   {
     value: 'Filter / Cartridge',
-    label: 'Filtre / Cartouche',
+    catKey: 'filter_cartridge',
     subs: [
-      { label: 'Filtre manquant', value: 'filter_/_cartridge__missing_filter' },
-      { label: 'Mauvais filtre reçu', value: 'filter_/_cartridge__wrong_filter_received' },
-      { label: 'Remplacement de filtre', value: 'filter_/_cartridge__filter_replacement' },
-      { label: 'Question cartouche', value: 'filter_/_cartridge__cartridge_question' },
-      { label: 'Durée de vie du filtre', value: 'filter_/_cartridge__filter_lifespan' },
-      { label: 'Problème filtre abonnement', value: 'filter_/_cartridge__subscription_filter_issue' },
+      'filter_/_cartridge__missing_filter',
+      'filter_/_cartridge__wrong_filter_received',
+      'filter_/_cartridge__filter_replacement',
+      'filter_/_cartridge__cartridge_question',
+      'filter_/_cartridge__filter_lifespan',
+      'filter_/_cartridge__subscription_filter_issue',
     ],
   },
   {
     value: 'Water quality / Performance',
-    label: "Qualité de l'eau / Performance",
+    catKey: 'water_quality',
     subs: [
-      { label: "Goût de l'eau", value: 'water_quality_/_performance__water_taste_issue' },
-      { label: 'Débit trop faible', value: 'water_quality_/_performance__water_flow_too_low' },
-      { label: 'Performance du filtre', value: 'water_quality_/_performance__filter_performance_concern' },
-      { label: "Inquiétude test d'eau", value: 'water_quality_/_performance__water_test_concern' },
-      { label: 'Eau toujours non potable', value: 'water_quality_/_performance__water_still_not_drinkable' },
-      { label: 'Question efficacité produit', value: 'water_quality_/_performance__product_efficiency_question' },
+      'water_quality_/_performance__water_taste_issue',
+      'water_quality_/_performance__water_flow_too_low',
+      'water_quality_/_performance__filter_performance_concern',
+      'water_quality_/_performance__water_test_concern',
+      'water_quality_/_performance__water_still_not_drinkable',
+      'water_quality_/_performance__product_efficiency_question',
     ],
   },
   {
     value: 'Refund / Return',
-    label: 'Remboursement / Retour',
+    catKey: 'refund_return',
     subs: [
-      { label: 'Demande de remboursement', value: 'refund_/_return__refund_request' },
-      { label: 'Remboursement total', value: 'refund_/_return__full_refund' },
-      { label: 'Remboursement partiel', value: 'refund_/_return__partial_refund' },
-      { label: 'Demande de retour', value: 'refund_/_return__return_request' },
-      { label: "Demande d'échange", value: 'refund_/_return__exchange_request' },
-      { label: 'Annulation avant expédition', value: 'refund_/_return__cancellation_before_shipment' },
-      { label: 'Annulation après expédition', value: 'refund_/_return__cancellation_after_shipment' },
-      { label: 'Demande de geste commercial', value: 'refund_/_return__commercial_gesture_request' },
+      'refund_/_return__refund_request',
+      'refund_/_return__full_refund',
+      'refund_/_return__partial_refund',
+      'refund_/_return__return_request',
+      'refund_/_return__exchange_request',
+      'refund_/_return__cancellation_before_shipment',
+      'refund_/_return__cancellation_after_shipment',
+      'refund_/_return__commercial_gesture_request',
     ],
   },
   {
     value: 'Subscription / Billing',
-    label: 'Abonnement / Facturation',
+    catKey: 'subscription_billing',
     subs: [
-      { label: "Annulation d'abonnement", value: 'subscription_/_billing__subscription_cancellation' },
-      { label: "Modification d'abonnement", value: 'subscription_/_billing__subscription_modification' },
-      { label: 'Double prélèvement', value: 'subscription_/_billing__duplicate_charge' },
-      { label: 'Problème de facturation', value: 'subscription_/_billing__billing_issue' },
-      { label: 'Paiement échoué', value: 'subscription_/_billing__payment_failed' },
-      { label: 'Question renouvellement', value: 'subscription_/_billing__renewal_question' },
+      'subscription_/_billing__subscription_cancellation',
+      'subscription_/_billing__subscription_modification',
+      'subscription_/_billing__duplicate_charge',
+      'subscription_/_billing__billing_issue',
+      'subscription_/_billing__payment_failed',
+      'subscription_/_billing__renewal_question',
     ],
   },
   {
     value: 'Complaint / Escalation',
-    label: 'Réclamation / Escalade',
+    catKey: 'complaint_escalation',
     subs: [
-      { label: 'Réclamation délai', value: 'complaint_/_escalation__delay_complaint' },
-      { label: 'Réclamation produit', value: 'complaint_/_escalation__product_complaint' },
-      { label: 'Réclamation service', value: 'complaint_/_escalation__service_complaint' },
-      { label: 'Absence de réponse', value: 'complaint_/_escalation__no_response_complaint' },
-      { label: 'Contacts répétés', value: 'complaint_/_escalation__repeated_contact' },
-      { label: "Demande d'escalade", value: 'complaint_/_escalation__escalation_request' },
+      'complaint_/_escalation__delay_complaint',
+      'complaint_/_escalation__product_complaint',
+      'complaint_/_escalation__service_complaint',
+      'complaint_/_escalation__no_response_complaint',
+      'complaint_/_escalation__repeated_contact',
+      'complaint_/_escalation__escalation_request',
     ],
   },
   {
     value: 'Other',
-    label: 'Autre',
-    subs: [
-      { label: 'Autre', value: 'other__other' },
-    ],
+    catKey: 'other',
+    subs: ['other__other'],
   },
 ]
+
+// Libellé traduit d'une sous-catégorie (accès direct : les valeurs
+// contiennent des '/' incompatibles avec keySeparator).
+const subLabel = (value: string): string => {
+  const table =
+    (i18n.getResource(i18n.language, 'support', 'sub') as Record<string, string> | undefined) ??
+    (i18n.getResource('fr', 'support', 'sub') as Record<string, string> | undefined)
+  return table?.[value] ?? value
+}
 
 // ─── Icônes ────────────────────────────────────────────────
 
@@ -227,6 +237,7 @@ function SelectSheet({ visible, title, options, selectedValue, onSelect, onClose
 // ─── Écran ─────────────────────────────────────────────────
 
 export default function SupportScreen() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const { showToast } = useToast()
   // Catégorie éventuellement pré-sélectionnée via la navigation (ex: depuis Commandes)
@@ -257,7 +268,7 @@ export default function SupportScreen() {
   }, [params.category])
 
   const selectedGroup = CATEGORIES.find(c => c.value === groupValue) ?? null
-  const selectedSub = selectedGroup?.subs.find(s => s.value === subValue) ?? null
+  const selectedSubValue = selectedGroup?.subs.find(s => s === subValue) ?? null
 
   const handleSelectGroup = (value: string) => {
     setGroupValue(value)
@@ -270,18 +281,20 @@ export default function SupportScreen() {
 
     // Validation — identique au site
     if (!email.trim() || !groupValue || !subValue || !message.trim()) {
-      setFeedback({ text: 'Veuillez remplir tous les champs.', type: 'error' })
+      setFeedback({ text: t('support:errorFillAll'), type: 'error' })
       return
     }
     if (message.trim().length < 10) {
-      setFeedback({ text: 'Votre message doit contenir au moins 10 caractères.', type: 'error' })
+      setFeedback({ text: t('support:errorMinLength'), type: 'error' })
       return
     }
 
     setSending(true)
 
-    // Sujet — même format que le site : valeur groupe + libellé sous-catégorie
-    const subjectLabel = `${groupValue} — ${selectedSub!.label}`
+    // Sujet — même format que le site : valeur groupe + libellé sous-catégorie.
+    // On garde le libellé FR pour que le routing/lecture Zendesk reste stable.
+    const frSub = (i18n.getResource('fr', 'support', 'sub') as Record<string, string>)?.[subValue!] ?? subValue
+    const subjectLabel = `${groupValue} — ${frSub}`
     const payload = {
       email: email.trim(),
       category: subValue,
@@ -300,15 +313,15 @@ export default function SupportScreen() {
         setGroupValue(null)
         setSubValue(null)
         setMessage('')
-        setFeedback({ text: 'Votre demande a bien été envoyée. Nous reviendrons vers vous rapidement.', type: 'success' })
-        showToast('Demande envoyée ✓', 'success')
+        setFeedback({ text: t('support:successBody'), type: 'success' })
+        showToast(t('support:sent'), 'success')
       } else {
-        setFeedback({ text: 'Une erreur est survenue. Réessayez ou contactez-nous directement.', type: 'error' })
-        showToast('Erreur lors de l\'envoi', 'error')
+        setFeedback({ text: t('support:errorGeneric'), type: 'error' })
+        showToast(t('support:sendError'), 'error')
       }
     } catch {
-      setFeedback({ text: 'Une erreur est survenue. Réessayez ou contactez-nous directement.', type: 'error' })
-      showToast('Erreur lors de l\'envoi', 'error')
+      setFeedback({ text: t('support:errorGeneric'), type: 'error' })
+      showToast(t('support:sendError'), 'error')
     } finally {
       setSending(false)
     }
@@ -326,22 +339,19 @@ export default function SupportScreen() {
       >
         {/* Header */}
         <View style={{ paddingTop: insets.top + theme.spacing[5], paddingHorizontal: theme.spacing[2] }}>
-          <Text style={styles.pageTitle}>Support</Text>
+          <Text style={styles.pageTitle}>{t('support:pageTitle')}</Text>
         </View>
 
         {/* Intro */}
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Nous sommes là pour vous aider</Text>
-          <Text style={styles.heroIntro}>
-            Une question ou besoin d'assistance ? Remplissez le formulaire ci-dessous
-            et nous reviendrons vers vous au plus vite.
-          </Text>
+          <Text style={styles.heroTitle}>{t('support:heroTitle')}</Text>
+          <Text style={styles.heroIntro}>{t('support:heroIntro')}</Text>
           <TouchableOpacity
             onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
             activeOpacity={0.7}
           >
             <Text style={styles.heroEmail}>
-              Ou contactez-nous directement :{' '}
+              {t('support:heroEmailPrefix')}
               <Text style={styles.heroEmailLink}>{SUPPORT_EMAIL}</Text>
             </Text>
           </TouchableOpacity>
@@ -352,27 +362,27 @@ export default function SupportScreen() {
         <View style={styles.card}>
 
           {/* Email */}
-          <Text style={styles.fieldLabel}>VOTRE ADRESSE EMAIL</Text>
+          <Text style={styles.fieldLabel}>{t('support:fieldEmail')}</Text>
           <TextInput
             style={styles.fieldInput}
-            placeholder="votre@email.com"
+            placeholder={t('support:emailPlaceholder')}
             placeholderTextColor={theme.colors.textXLight}
             value={email}
-            onChangeText={(t) => { setEmail(t); setFeedback(null) }}
+            onChangeText={(v) => { setEmail(v); setFeedback(null) }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
           />
 
           {/* Catégorie */}
-          <Text style={styles.fieldLabel}>CATÉGORIE</Text>
+          <Text style={styles.fieldLabel}>{t('support:fieldCategory')}</Text>
           <TouchableOpacity
             style={styles.selectField}
             onPress={() => setGroupSheetOpen(true)}
             activeOpacity={0.7}
           >
             <Text style={selectedGroup ? styles.selectValue : styles.selectPlaceholder}>
-              {selectedGroup?.label ?? 'Choisir une catégorie'}
+              {selectedGroup ? t(`support:cat.${selectedGroup.catKey}`) : t('support:chooseCategory')}
             </Text>
             <ChevronDown color={theme.colors.textLight} />
           </TouchableOpacity>
@@ -380,14 +390,14 @@ export default function SupportScreen() {
           {/* Sous-catégorie — apparaît après le choix de la catégorie */}
           {selectedGroup && (
             <>
-              <Text style={styles.fieldLabel}>SOUS-CATÉGORIE</Text>
+              <Text style={styles.fieldLabel}>{t('support:fieldSubCategory')}</Text>
               <TouchableOpacity
                 style={styles.selectField}
                 onPress={() => setSubSheetOpen(true)}
                 activeOpacity={0.7}
               >
-                <Text style={selectedSub ? styles.selectValue : styles.selectPlaceholder}>
-                  {selectedSub?.label ?? 'Choisir une sous-catégorie'}
+                <Text style={selectedSubValue ? styles.selectValue : styles.selectPlaceholder}>
+                  {selectedSubValue ? subLabel(selectedSubValue) : t('support:chooseSubCategory')}
                 </Text>
                 <ChevronDown color={theme.colors.textLight} />
               </TouchableOpacity>
@@ -395,13 +405,13 @@ export default function SupportScreen() {
           )}
 
           {/* Message */}
-          <Text style={styles.fieldLabel}>VOTRE MESSAGE</Text>
+          <Text style={styles.fieldLabel}>{t('support:fieldMessage')}</Text>
           <TextInput
             style={[styles.fieldInput, styles.fieldTextarea]}
-            placeholder="Décrivez votre demande..."
+            placeholder={t('support:messagePlaceholder')}
             placeholderTextColor={theme.colors.textXLight}
             value={message}
-            onChangeText={(t) => { setMessage(t); setFeedback(null) }}
+            onChangeText={(v) => { setMessage(v); setFeedback(null) }}
             multiline
             numberOfLines={5}
             textAlignVertical="top"
@@ -431,14 +441,14 @@ export default function SupportScreen() {
           >
             {sending
               ? <ActivityIndicator color={theme.colors.white} size="small" />
-              : <Text style={styles.submitBtnText}>Envoyer la demande</Text>
+              : <Text style={styles.submitBtnText}>{t('support:send')}</Text>
             }
           </TouchableOpacity>
         </View>
 
         <View style={styles.footerBrand}>
           <Logo width={92} color={theme.colors.navy} />
-          <Text style={styles.signature}>– L'équipe Puure</Text>
+          <Text style={styles.signature}>{t('support:signature')}</Text>
         </View>
 
         {/* Liens légaux — requis par l'App Store et Google Play */}
@@ -446,17 +456,17 @@ export default function SupportScreen() {
           <TouchableOpacity
             onPress={() => Linking.openURL('https://puurefilters.com/policies/privacy-policy')}
             accessibilityRole="link"
-            accessibilityLabel="Politique de confidentialité"
+            accessibilityLabel={t('support:privacyPolicy')}
           >
-            <Text style={styles.legalLink}>Politique de confidentialité</Text>
+            <Text style={styles.legalLink}>{t('support:privacyPolicy')}</Text>
           </TouchableOpacity>
           <Text style={styles.legalDot}>·</Text>
           <TouchableOpacity
             onPress={() => Linking.openURL('https://puurefilters.com/policies/terms-of-service')}
             accessibilityRole="link"
-            accessibilityLabel="Conditions d'utilisation"
+            accessibilityLabel={t('support:termsOfService')}
           >
-            <Text style={styles.legalLink}>Conditions d'utilisation</Text>
+            <Text style={styles.legalLink}>{t('support:termsOfService')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -464,16 +474,16 @@ export default function SupportScreen() {
       {/* Sheets de sélection */}
       <SelectSheet
         visible={groupSheetOpen}
-        title="Catégorie"
-        options={CATEGORIES.map(c => ({ label: c.label, value: c.value }))}
+        title={t('support:sheetCategory')}
+        options={CATEGORIES.map(c => ({ label: t(`support:cat.${c.catKey}`), value: c.value }))}
         selectedValue={groupValue}
         onSelect={handleSelectGroup}
         onClose={() => setGroupSheetOpen(false)}
       />
       <SelectSheet
         visible={subSheetOpen}
-        title="Sous-catégorie"
-        options={selectedGroup?.subs ?? []}
+        title={t('support:sheetSubCategory')}
+        options={(selectedGroup?.subs ?? []).map(v => ({ label: subLabel(v), value: v }))}
         selectedValue={subValue}
         onSelect={(v) => { setSubValue(v); setFeedback(null) }}
         onClose={() => setSubSheetOpen(false)}
