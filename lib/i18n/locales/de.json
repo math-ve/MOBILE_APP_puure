@@ -16,7 +16,46 @@
     "errorSync": "Synchronisierungsfehler",
     "requiredFields": "Fehlende Angaben",
     "sessionExpired": "Sitzung abgelaufen",
-    "reconnectPrompt": "Bitte melde dich erneut an."
+    "reconnectPrompt": "Bitte melde dich erneut an.",
+    "dateAtTime": "{{date}} um {{time}}"
+  },
+  "tabs": {
+    "home": "Start",
+    "subscriptions": "Abonnements",
+    "filters": "Filter",
+    "support": "Support"
+  },
+  "home": {
+    "greetingMorning": "Guten Morgen",
+    "greetingAfternoon": "Guten Tag",
+    "greetingEvening": "Guten Abend",
+    "greetingWithName": "{{greeting}}, {{name}}",
+    "notificationsA11y": "Benachrichtigungen",
+    "notificationsUnreadA11y": "Benachrichtigungen, neue ungelesene Benachrichtigungen",
+    "noFilterConfigured": "Kein Filter eingerichtet",
+    "addMyFilter": "Filter hinzufügen →",
+    "yourCartridges": "Deine Kartuschen",
+    "filterFallback": "Filter",
+    "ringLabel": "verbraucht",
+    "statUsed": "Verbraucht",
+    "statRemaining": "Übrig",
+    "daysShort": "{{count}} T",
+    "cartridgeReplaced": "💧 Kartusche gewechselt",
+    "waterPurifiedTitle": "Dein Wasser ist gereinigt 💧",
+    "waterPurifiedSub": "Aktiver Filter · Optimale Qualität",
+    "signOut": "Abmelden",
+    "notificationsTitle": "Benachrichtigungen",
+    "noNotifications": "Noch keine Benachrichtigungen"
+  },
+  "systems": {
+    "heading": "Deine Puure-Systeme",
+    "add": "Hinzufügen →",
+    "discoverA11y": "Das {{label}}-System im Puure-Shop entdecken",
+    "tap": "Wasserhahn",
+    "shower": "Dusche",
+    "messageComplete": "Gut gemacht! Dein Wasser ist rundum geschützt 💧",
+    "messageNone": "Rüste dich aus für jeden Tag gesünderes Wasser.",
+    "messagePartial": "Vervollständige deinen Schutz für perfekt gefiltertes Wasser."
   },
   "auth": {
     "loginTitle": "Anmelden",

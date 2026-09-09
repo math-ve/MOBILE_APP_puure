@@ -3,20 +3,22 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Image, Linking, Animated, Easing,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useTranslation } from 'react-i18next'
 import theme from '../../lib/theme'
 
 // ─── Catalogue des systèmes Puure ──────────────────────────
 // `key` correspond à la valeur `filter_type` stockée sur les filtres.
+// `labelKey` pointe vers systems:* (i18n).
 const SYSTEMS = [
   {
     key: 'robinet' as const,
-    label: 'Robinet',
+    labelKey: 'systems:tap',
     image: require('../../assets/products/tap-system.png'),
     url: 'https://puurefilters.com/products/tap-system',
   },
   {
     key: 'douche' as const,
-    label: 'Douche',
+    labelKey: 'systems:shower',
     image: require('../../assets/products/shower-system.png'),
     url: 'https://puurefilters.com/products/shower-system',
   },
@@ -30,6 +32,7 @@ interface SystemsProgressProps {
 }
 
 export default function SystemsProgress({ ownedTypes, style }: SystemsProgressProps) {
+  const { t } = useTranslation()
   const owned = new Set(ownedTypes)
   const ownedCount = SYSTEMS.filter(s => owned.has(s.key)).length
   const total = SYSTEMS.length
@@ -37,16 +40,16 @@ export default function SystemsProgress({ ownedTypes, style }: SystemsProgressPr
 
   // Message dynamique selon la complétion
   const message = complete
-    ? 'Bravo ! Votre eau est protégée sur toute la ligne 💧'
+    ? t('systems:messageComplete')
     : ownedCount === 0
-      ? 'Équipez-vous pour une eau plus saine au quotidien.'
-      : 'Complétez votre protection pour une eau parfaitement filtrée.'
+      ? t('systems:messageNone')
+      : t('systems:messagePartial')
 
   return (
     <View style={[styles.card, style]}>
       {/* En-tête : titre + compteur */}
       <View style={styles.header}>
-        <Text style={styles.title}>VOS SYSTÈMES PUURE</Text>
+        <Text style={styles.title}>{t('systems:heading').toUpperCase()}</Text>
         <View style={[styles.counter, complete && styles.counterComplete]}>
           <Text style={[styles.counterText, complete && styles.counterTextComplete]}>
             {ownedCount}/{total}
@@ -71,6 +74,8 @@ export default function SystemsProgress({ ownedTypes, style }: SystemsProgressPr
 
 // ─── Tuile individuelle ────────────────────────────────────
 function SystemTile({ system, owned }: { system: typeof SYSTEMS[number]; owned: boolean }) {
+  const { t } = useTranslation()
+  const label = t(system.labelKey)
   const scale = useRef(new Animated.Value(1)).current
 
   // Léger pulse d'appel à l'action sur les systèmes manquants
@@ -101,13 +106,13 @@ function SystemTile({ system, owned }: { system: typeof SYSTEMS[number]; owned: 
 
       {/* Pied de tuile */}
       <View style={styles.tileFooter}>
-        <Text style={[styles.tileLabel, !owned && styles.tileLabelMissing]}>{system.label}</Text>
+        <Text style={[styles.tileLabel, !owned && styles.tileLabelMissing]}>{label}</Text>
         {owned ? (
           <View style={styles.ownedBadge}>
             <Text style={styles.ownedCheck}>✓</Text>
           </View>
         ) : (
-          <Text style={styles.addCta}>Ajouter →</Text>
+          <Text style={styles.addCta}>{t('systems:add')}</Text>
         )}
       </View>
     </Animated.View>
@@ -121,7 +126,7 @@ function SystemTile({ system, owned }: { system: typeof SYSTEMS[number]; owned: 
       activeOpacity={0.85}
       onPress={() => Linking.openURL(system.url)}
       accessibilityRole="link"
-      accessibilityLabel={`Découvrir le système ${system.label} sur la boutique Puure`}
+      accessibilityLabel={t('systems:discoverA11y', { label })}
     >
       {content}
     </TouchableOpacity>

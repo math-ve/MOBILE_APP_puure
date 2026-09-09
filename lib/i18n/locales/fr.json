@@ -16,7 +16,46 @@
     "errorSync": "Erreur de synchronisation",
     "requiredFields": "Champs manquants",
     "sessionExpired": "Session expirée",
-    "reconnectPrompt": "Veuillez vous reconnecter."
+    "reconnectPrompt": "Veuillez vous reconnecter.",
+    "dateAtTime": "{{date}} à {{time}}"
+  },
+  "tabs": {
+    "home": "Accueil",
+    "subscriptions": "Abonnements",
+    "filters": "Filtres",
+    "support": "Support"
+  },
+  "home": {
+    "greetingMorning": "Bonjour",
+    "greetingAfternoon": "Bon après-midi",
+    "greetingEvening": "Bonsoir",
+    "greetingWithName": "{{greeting}}, {{name}}",
+    "notificationsA11y": "Notifications",
+    "notificationsUnreadA11y": "Notifications, nouvelles notifications non lues",
+    "noFilterConfigured": "Aucun filtre configuré",
+    "addMyFilter": "Ajouter mon filtre →",
+    "yourCartridges": "Vos cartouches",
+    "filterFallback": "Filtre",
+    "ringLabel": "utilisé",
+    "statUsed": "Utilisé",
+    "statRemaining": "Restants",
+    "daysShort": "{{count}}j",
+    "cartridgeReplaced": "💧 Cartouche remplacée",
+    "waterPurifiedTitle": "Votre eau est purifiée 💧",
+    "waterPurifiedSub": "Filtre actif · Qualité optimale",
+    "signOut": "Se déconnecter",
+    "notificationsTitle": "Notifications",
+    "noNotifications": "Aucune notification pour le moment"
+  },
+  "systems": {
+    "heading": "Vos systèmes Puure",
+    "add": "Ajouter →",
+    "discoverA11y": "Découvrir le système {{label}} sur la boutique Puure",
+    "tap": "Robinet",
+    "shower": "Douche",
+    "messageComplete": "Bravo ! Votre eau est protégée sur toute la ligne 💧",
+    "messageNone": "Équipez-vous pour une eau plus saine au quotidien.",
+    "messagePartial": "Complétez votre protection pour une eau parfaitement filtrée."
   },
   "auth": {
     "loginTitle": "Connexion",

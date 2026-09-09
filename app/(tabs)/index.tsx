@@ -8,23 +8,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Path } from 'react-native-svg'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
+import { formatDate, formatDateShort, formatTime } from '../../lib/i18n/format'
 import ProgressRing from '../../components/ui/ProgressRing'
 import Logo from '../../components/ui/Logo'
 import SystemsProgress from '../../components/ui/SystemsProgress'
 
 // ─── Helpers ───────────────────────────────────────────────
 
-const getGreeting = () => {
+const greetingKey = () => {
   const h = new Date().getHours()
-  if (h < 12) return 'Bonjour'
-  if (h < 18) return 'Bon après-midi'
-  return 'Bonsoir'
+  if (h < 12) return 'home:greetingMorning'
+  if (h < 18) return 'home:greetingAfternoon'
+  return 'home:greetingEvening'
 }
 
 const formatToday = () => {
-  const d = new Date().toLocaleDateString('fr-FR', {
+  const d = formatDate(new Date(), {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
   return d.charAt(0).toUpperCase() + d.slice(1)
@@ -57,10 +59,7 @@ const NOTIF_TYPE_ICONS: Record<string, string> = {
 
 const formatNotifDate = (iso: string | null) => {
   if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-    + ' · '
-    + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
+  return formatDateShort(iso) + ' · ' + formatTime(iso)
 }
 
 // ─── Petits composants animés ──────────────────────────────
@@ -168,6 +167,7 @@ function DropIcon({ size = 64, color = theme.colors.border }: { size?: number; c
 // ─── Écran ─────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const [profile, setProfile] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -259,7 +259,9 @@ export default function HomeScreen() {
             <Logo width={88} color={theme.colors.white} />
           </View>
           <Text style={styles.greeting}>
-            {firstName ? `${getGreeting()}, ${firstName}` : getGreeting()}
+            {firstName
+              ? t('home:greetingWithName', { greeting: t(greetingKey()), name: firstName })
+              : t(greetingKey())}
           </Text>
           <Text style={styles.dateText}>{formatToday()}</Text>
         </View>
@@ -268,7 +270,7 @@ export default function HomeScreen() {
           onPress={openNotifications}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel={hasUnread ? 'Notifications, nouvelles notifications non lues' : 'Notifications'}
+          accessibilityLabel={hasUnread ? t('home:notificationsUnreadA11y') : t('home:notificationsA11y')}
         >
           <BellIcon />
           {hasUnread && <View style={styles.bellBadge} />}
@@ -293,26 +295,26 @@ export default function HomeScreen() {
               {timers.length === 0 ? (
                 <View style={styles.emptyState}>
                   <DropIcon />
-                  <Text style={styles.emptyTitle}>Aucun filtre configuré</Text>
+                  <Text style={styles.emptyTitle}>{t('home:noFilterConfigured')}</Text>
                   <TouchableOpacity
                     style={styles.btnBlue}
                     onPress={() => router.push('/(tabs)/filters')}
                     activeOpacity={0.85}
                   >
-                    <Text style={styles.btnBlueText}>Ajouter mon filtre →</Text>
+                    <Text style={styles.btnBlueText}>{t('home:addMyFilter')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <>
-                  <Text style={styles.sectionCaps}>VOS CARTOUCHES</Text>
-                  {timers.map((t, i) => {
-                    const p = getProgress(t)
-                    const days = getDaysRemaining(t)
+                  <Text style={styles.sectionCaps}>{t('home:yourCartridges').toUpperCase()}</Text>
+                  {timers.map((timer, i) => {
+                    const p = getProgress(timer)
+                    const days = getDaysRemaining(timer)
                     return (
-                      <View key={t.id} style={[styles.timerBlock, i > 0 && styles.timerBlockDivider]}>
+                      <View key={timer.id} style={[styles.timerBlock, i > 0 && styles.timerBlockDivider]}>
                         {/* Nom + badge % */}
                         <View style={styles.timerHeader}>
-                          <Text style={styles.timerName}>{t.filters?.product_name ?? 'Filtre'}</Text>
+                          <Text style={styles.timerName}>{timer.filters?.product_name ?? t('home:filterFallback')}</Text>
                           <View style={[styles.pctBadge, { backgroundColor: getProgressBg(p) }]}>
                             <Text style={[styles.pctBadgeText, { color: getProgressColor(p) }]}>{p}%</Text>
                           </View>
@@ -320,19 +322,19 @@ export default function HomeScreen() {
 
                         {/* Jauge circulaire */}
                         <View style={styles.ringWrap}>
-                          <ProgressRing progress={p} size={180} strokeWidth={12} label="utilisé" />
+                          <ProgressRing progress={p} size={180} strokeWidth={12} label={t('home:ringLabel')} />
                         </View>
 
                         {/* 3 stats */}
                         <View style={styles.statsRow}>
                           <View style={styles.statCol}>
                             <Text style={styles.statValue}>{p}%</Text>
-                            <Text style={styles.statLabel}>UTILISÉ</Text>
+                            <Text style={styles.statLabel}>{t('home:statUsed').toUpperCase()}</Text>
                           </View>
                           <View style={styles.statDivider} />
                           <View style={styles.statCol}>
-                            <Text style={styles.statValue}>{days}j</Text>
-                            <Text style={styles.statLabel}>RESTANTS</Text>
+                            <Text style={styles.statValue}>{t('home:daysShort', { count: days })}</Text>
+                            <Text style={styles.statLabel}>{t('home:statRemaining').toUpperCase()}</Text>
                           </View>
                         </View>
 
@@ -342,7 +344,7 @@ export default function HomeScreen() {
                           onPress={() => router.push('/(tabs)/filters')}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.btnOutlineText}>💧 Cartouche remplacée</Text>
+                          <Text style={styles.btnOutlineText}>{t('home:cartridgeReplaced')}</Text>
                         </TouchableOpacity>
                       </View>
                     )
@@ -362,8 +364,8 @@ export default function HomeScreen() {
             <FadeIn index={2}>
               <View style={styles.purityBanner}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.purityTitle}>Votre eau est purifiée 💧</Text>
-                  <Text style={styles.puritySub}>Filtre actif · Qualité optimale</Text>
+                  <Text style={styles.purityTitle}>{t('home:waterPurifiedTitle')}</Text>
+                  <Text style={styles.puritySub}>{t('home:waterPurifiedSub')}</Text>
                 </View>
                 <PurityIndicator />
               </View>
@@ -374,7 +376,7 @@ export default function HomeScreen() {
           <FadeIn index={3}>
             <View style={{ height: theme.spacing[6] }} />
             <TouchableOpacity onPress={handleSignOut} activeOpacity={0.6}>
-              <Text style={styles.signOut}>Se déconnecter</Text>
+              <Text style={styles.signOut}>{t('home:signOut')}</Text>
             </TouchableOpacity>
           </FadeIn>
         </>
@@ -391,11 +393,11 @@ export default function HomeScreen() {
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setNotifSheetOpen(false)} activeOpacity={1} />
           <View style={[styles.notifSheet, { paddingBottom: insets.bottom + theme.spacing[6] }]}>
             <View style={styles.notifHandle} />
-            <Text style={styles.notifTitle}>Notifications</Text>
+            <Text style={styles.notifTitle}>{t('home:notificationsTitle')}</Text>
             {notifications.length === 0 ? (
               <View style={styles.notifEmpty}>
                 <Text style={styles.notifEmptyIcon}>🔔</Text>
-                <Text style={styles.notifEmptyText}>Aucune notification pour le moment</Text>
+                <Text style={styles.notifEmptyText}>{t('home:noNotifications')}</Text>
               </View>
             ) : (
               <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>

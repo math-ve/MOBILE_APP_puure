@@ -16,7 +16,46 @@
     "errorSync": "Sync error",
     "requiredFields": "Missing fields",
     "sessionExpired": "Session expired",
-    "reconnectPrompt": "Please sign in again."
+    "reconnectPrompt": "Please sign in again.",
+    "dateAtTime": "{{date}} at {{time}}"
+  },
+  "tabs": {
+    "home": "Home",
+    "subscriptions": "Subscriptions",
+    "filters": "Filters",
+    "support": "Support"
+  },
+  "home": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "greetingWithName": "{{greeting}}, {{name}}",
+    "notificationsA11y": "Notifications",
+    "notificationsUnreadA11y": "Notifications, new unread notifications",
+    "noFilterConfigured": "No filter set up",
+    "addMyFilter": "Add my filter →",
+    "yourCartridges": "Your cartridges",
+    "filterFallback": "Filter",
+    "ringLabel": "used",
+    "statUsed": "Used",
+    "statRemaining": "Left",
+    "daysShort": "{{count}}d",
+    "cartridgeReplaced": "💧 Cartridge replaced",
+    "waterPurifiedTitle": "Your water is purified 💧",
+    "waterPurifiedSub": "Active filter · Optimal quality",
+    "signOut": "Sign out",
+    "notificationsTitle": "Notifications",
+    "noNotifications": "No notifications yet"
+  },
+  "systems": {
+    "heading": "Your Puure systems",
+    "add": "Add →",
+    "discoverA11y": "Discover the {{label}} system on the Puure store",
+    "tap": "Tap",
+    "shower": "Shower",
+    "messageComplete": "Well done! Your water is protected end to end 💧",
+    "messageNone": "Equip yourself for healthier water every day.",
+    "messagePartial": "Complete your protection for perfectly filtered water."
   },
   "auth": {
     "loginTitle": "Sign in",

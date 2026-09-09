@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native'
+import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTranslation } from 'react-i18next'
 import Svg, { Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import theme from '../../lib/theme'
@@ -70,11 +71,11 @@ function HeadphonesIcon({ color, size }: IconProps) {
 
 // ─── Config onglets ────────────────────────────────────────
 
-const TABS: Record<string, { label: string; Icon: (p: IconProps) => React.JSX.Element }> = {
-  index: { label: 'Accueil', Icon: HomeIcon },
-  orders: { label: 'Abonnements', Icon: RefreshIcon },
-  filters: { label: 'Filtres', Icon: DropIcon },
-  support: { label: 'Support', Icon: HeadphonesIcon },
+const TABS: Record<string, { labelKey: string; Icon: (p: IconProps) => React.JSX.Element }> = {
+  index: { labelKey: 'tabs:home', Icon: HomeIcon },
+  orders: { labelKey: 'tabs:subscriptions', Icon: RefreshIcon },
+  filters: { labelKey: 'tabs:filters', Icon: DropIcon },
+  support: { labelKey: 'tabs:support', Icon: HeadphonesIcon },
 }
 
 // ─── Item d'onglet ─────────────────────────────────────────
@@ -87,6 +88,7 @@ interface TabItemProps {
 }
 
 function TabItem({ routeName, isFocused, onPress, onLayout }: TabItemProps) {
+  const { t } = useTranslation()
   const tab = TABS[routeName]
   const iconScale = useRef(new Animated.Value(1)).current
   const labelOpacity = useRef(new Animated.Value(isFocused ? 1 : 0)).current
@@ -116,7 +118,8 @@ function TabItem({ routeName, isFocused, onPress, onLayout }: TabItemProps) {
   }
 
   if (!tab) return null
-  const { label, Icon } = tab
+  const { labelKey, Icon } = tab
+  const label = t(labelKey)
 
   return (
     <TouchableOpacity
