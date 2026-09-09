@@ -9,8 +9,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker'
 import Svg, { Path } from 'react-native-svg'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../lib/supabase'
 import theme from '../lib/theme'
+import i18n from '../lib/i18n'
+import { formatDate as fmtDate, formatDateShort as fmtDateShort, formatCurrency, formatFrequency } from '../lib/i18n/format'
+import { getSubscriptionStatus } from '../lib/statuses'
 import { useToast } from '../hooks/useToast'
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
@@ -19,23 +23,15 @@ type Tab = 'details' | 'upcoming' | 'past'
 
 // ─── Helpers ───────────────────────────────────────────────
 
-const formatDate = (iso?: string | null) => {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-const formatDateShort = (iso?: string | null) => {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
-}
+const formatDate = (iso?: string | null) => (iso ? fmtDate(iso) : '—')
+const formatDateShort = (iso?: string | null) =>
+  iso ? fmtDateShort(iso) : '—'
 
 const formatPrice = (amount?: number | string | null, currency?: string | null) => {
   if (amount == null) return '—'
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency', currency: currency ?? 'EUR', minimumFractionDigits: 2,
-  }).format(num)
+  return formatCurrency(num, currency ?? 'EUR')
 }
 
 // Statut réel d'une commande passée d'abonnement (Appstle).
@@ -49,41 +45,31 @@ const getPastOrderStatus = (order: any): { label: string; color: string; bg: str
   const blue = { color: theme.colors.blue, bg: 'rgba(39,100,255,0.10)' }
   const orange = { color: theme.colors.warning, bg: 'rgba(255,92,0,0.10)' }
   const red = { color: theme.colors.error, bg: 'rgba(227,44,43,0.10)' }
+  const label = (k: string) => i18n.t(`subscription:pastStatus.${k}`)
 
-  // Échec de facturation
-  if (billing && billing !== 'SUCCESS') return { label: 'Échec', ...red }
-  // Statut de livraison connu
-  if (fulfillment === 'FULFILLED') return { label: 'Expédiée', ...blue }
-  if (fulfillment === 'DELIVERED') return { label: 'Livrée', ...green }
-  if (fulfillment === 'PARTIALLY_FULFILLED') return { label: 'Partielle', ...blue }
-  if (fulfillment === 'ON_HOLD' || fulfillment === 'SCHEDULED') return { label: 'En préparation', ...orange }
-  if (financial === 'REFUNDED' || financial === 'PARTIALLY_REFUNDED') return { label: 'Remboursée', ...orange }
-  // Facturée avec succès mais pas encore expédiée (fulfillment null)
-  return { label: 'Confirmée', ...blue }
-}
-
-const formatFrequency = (unit?: string | null, value?: number | null) => {
-  if (!unit || value == null) return '—'
-  const labels: Record<string, string> = {
-    week: 'semaines', weeks: 'semaines', month: 'mois', months: 'mois', day: 'jours', days: 'jours',
-  }
-  const label = labels[unit.toLowerCase()] ?? unit
-  const prefix = unit.toLowerCase().startsWith('week') ? 'Toutes les' : 'Tous les'
-  return `${prefix} ${value} ${label}`
+  if (billing && billing !== 'SUCCESS') return { label: label('failed'), ...red }
+  if (fulfillment === 'FULFILLED') return { label: label('shipped'), ...blue }
+  if (fulfillment === 'DELIVERED') return { label: label('delivered'), ...green }
+  if (fulfillment === 'PARTIALLY_FULFILLED') return { label: label('partial'), ...blue }
+  if (fulfillment === 'ON_HOLD' || fulfillment === 'SCHEDULED') return { label: label('preparing'), ...orange }
+  if (financial === 'REFUNDED' || financial === 'PARTIALLY_REFUNDED') return { label: label('refunded'), ...orange }
+  return { label: label('confirmed'), ...blue }
 }
 
 const toISODate = (d: Date) => d.toISOString().split('T')[0]
-
-const STATUS_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-  active: { label: 'ACTIF', bg: 'rgba(30,187,110,0.12)', color: theme.colors.success },
-  paused: { label: 'PAUSÉ', bg: 'rgba(255,92,0,0.10)', color: theme.colors.warning },
-  cancelled: { label: 'ANNULÉ', bg: 'rgba(227,44,43,0.10)', color: theme.colors.error },
-}
 
 const CARD_BRANDS: Record<string, { label: string; bg: string }> = {
   visa: { label: 'VISA', bg: '#1a1f71' },
   mastercard: { label: 'MASTERCARD', bg: '#eb001b' },
   amex: { label: 'AMEX', bg: '#006fcf' },
+}
+
+// Libellé pays traduit ; repli sur la valeur brute.
+const countryLabel = (value: string): string => {
+  const table =
+    (i18n.getResource(i18n.language, 'subscription', 'country') as Record<string, string> | undefined) ??
+    (i18n.getResource('fr', 'subscription', 'country') as Record<string, string> | undefined)
+  return table?.[value] ?? value
 }
 
 // ─── Animations ────────────────────────────────────────────
@@ -204,16 +190,12 @@ function BottomSheet({ onClose, children }: { onClose: () => void; children: Rea
 
 // ─── Modal fréquence ───────────────────────────────────────
 
-const FREQ_OPTIONS = [
-  { label: '1 mois', value: 1 },
-  { label: '2 mois', value: 2 },
-  { label: '3 mois', value: 3 },
-  { label: '6 mois', value: 6 },
-]
+const FREQ_VALUES = [1, 2, 3, 6]
 
 function FrequencySheet({ contractId, currentValue, onClose, onSaved }: {
   contractId: string; currentValue: number | null; onClose: () => void; onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const [selected, setSelected] = useState(currentValue ?? 1)
   const [saving, setSaving] = useState(false)
@@ -230,10 +212,10 @@ function FrequencySheet({ contractId, currentValue, onClose, onSaved }: {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error ?? 'Erreur')
-      showToast('Fréquence mise à jour', 'success')
+      showToast(t('subscription:freqUpdated'), 'success')
       onSaved()
     } catch (e: any) {
-      showToast(e.message ?? 'Une erreur est survenue', 'error')
+      showToast(e.message ?? t('common:errorGeneric'), 'error')
     } finally {
       setSaving(false)
     }
@@ -241,18 +223,20 @@ function FrequencySheet({ contractId, currentValue, onClose, onSaved }: {
 
   return (
     <BottomSheet onClose={onClose}>
-      <Text style={s.sheetTitle}>Modifier la fréquence</Text>
+      <Text style={s.sheetTitle}>{t('subscription:freqSheetTitle')}</Text>
       <View style={{ gap: theme.spacing[2] + 2 }}>
-        {FREQ_OPTIONS.map(opt => {
-          const isSelected = selected === opt.value
+        {FREQ_VALUES.map(value => {
+          const isSelected = selected === value
           return (
             <TouchableOpacity
-              key={opt.value}
+              key={value}
               style={[s.freqOption, isSelected && s.freqOptionActive]}
-              onPress={() => setSelected(opt.value)}
+              onPress={() => setSelected(value)}
               activeOpacity={0.7}
             >
-              <Text style={[s.freqOptionText, isSelected && s.freqOptionTextActive]}>{opt.label}</Text>
+              <Text style={[s.freqOptionText, isSelected && s.freqOptionTextActive]}>
+                {t('subscription:freqOption', { count: value })}
+              </Text>
               {isSelected && <CheckIcon color={theme.colors.blue} />}
             </TouchableOpacity>
           )
@@ -266,7 +250,7 @@ function FrequencySheet({ contractId, currentValue, onClose, onSaved }: {
       >
         {saving
           ? <ActivityIndicator color={theme.colors.navy} size="small" />
-          : <Text style={s.btnLimeText}>Confirmer</Text>
+          : <Text style={s.btnLimeText}>{t('subscription:confirm')}</Text>
         }
       </TouchableOpacity>
     </BottomSheet>
@@ -275,18 +259,19 @@ function FrequencySheet({ contractId, currentValue, onClose, onSaved }: {
 
 // ─── Modal adresse ─────────────────────────────────────────
 
-const COUNTRY_OPTIONS: { label: string; value: string; code: string }[] = [
-  { label: 'Belgique', value: 'Belgium', code: 'BE' },
-  { label: 'France', value: 'France', code: 'FR' },
-  { label: 'Luxembourg', value: 'Luxembourg', code: 'LU' },
-  { label: 'Pays-Bas', value: 'Netherlands', code: 'NL' },
-  { label: 'Suisse', value: 'Switzerland', code: 'CH' },
-  { label: 'Allemagne', value: 'Germany', code: 'DE' },
-  { label: 'Autriche', value: 'Austria', code: 'AT' },
-  { label: 'Espagne', value: 'Spain', code: 'ES' },
-  { label: 'Italie', value: 'Italy', code: 'IT' },
-  { label: 'Portugal', value: 'Portugal', code: 'PT' },
-  { label: 'Royaume-Uni', value: 'United Kingdom', code: 'GB' },
+// `value` = valeur envoyée à Shopify/Appstle — inchangée. Libellé via i18n.
+const COUNTRY_OPTIONS: { value: string; code: string }[] = [
+  { value: 'Belgium', code: 'BE' },
+  { value: 'France', code: 'FR' },
+  { value: 'Luxembourg', code: 'LU' },
+  { value: 'Netherlands', code: 'NL' },
+  { value: 'Switzerland', code: 'CH' },
+  { value: 'Germany', code: 'DE' },
+  { value: 'Austria', code: 'AT' },
+  { value: 'Spain', code: 'ES' },
+  { value: 'Italy', code: 'IT' },
+  { value: 'Portugal', code: 'PT' },
+  { value: 'United Kingdom', code: 'GB' },
 ]
 
 const COUNTRY_CODES: Record<string, string> = {
@@ -306,6 +291,7 @@ type AddressFields = {
 function AddressSheet({ contractId, initial, onClose, onSaved }: {
   contractId: string; initial: any; onClose: () => void; onSaved: (addr: any) => void
 }) {
+  const { t } = useTranslation()
   const [fields, setFields] = useState<AddressFields>({
     firstName: initial?.firstName ?? '',
     lastName: initial?.lastName ?? '',
@@ -327,13 +313,13 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
 
   const handleSave = async () => {
     if (!fields.firstName || !fields.lastName || !fields.address1 || !fields.city || !fields.zip || !fields.country) {
-      Alert.alert('Champs manquants', 'Veuillez remplir tous les champs obligatoires (*).')
+      Alert.alert(t('subscription:missingFields'), t('subscription:missingFieldsBody'))
       return
     }
     setSaving(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { Alert.alert('Session expirée', 'Veuillez vous reconnecter.'); return }
+      if (!session) { Alert.alert(t('common:sessionExpired'), t('common:reconnectPrompt')); return }
       const address = {
         firstName: fields.firstName,
         lastName: fields.lastName,
@@ -363,43 +349,43 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
       }
       onSaved(address)
     } catch (e: any) {
-      Alert.alert('Erreur', e?.message ?? 'Erreur lors de la mise à jour')
+      Alert.alert(t('common:errorGeneric'), e?.message ?? t('subscription:updateError'))
     } finally {
       setSaving(false)
     }
   }
 
-  const textFields: { key: keyof AddressFields; label: string; placeholder: string }[] = [
-    { key: 'firstName', label: 'PRÉNOM *', placeholder: 'Prénom' },
-    { key: 'lastName', label: 'NOM *', placeholder: 'Nom' },
-    { key: 'address1', label: 'ADRESSE *', placeholder: 'Rue et numéro' },
-    { key: 'address2', label: 'COMPLÉMENT', placeholder: 'Appartement, bâtiment… (optionnel)' },
-    { key: 'city', label: 'VILLE *', placeholder: 'Ville' },
-    { key: 'zip', label: 'CODE POSTAL *', placeholder: 'Code postal' },
-    { key: 'phone', label: 'TÉLÉPHONE', placeholder: '+32 … (optionnel)' },
+  const textFields: { key: keyof AddressFields; labelKey: string; phKey: string }[] = [
+    { key: 'firstName', labelKey: 'fieldFirstName', phKey: 'phFirstName' },
+    { key: 'lastName', labelKey: 'fieldLastName', phKey: 'phLastName' },
+    { key: 'address1', labelKey: 'fieldAddress1', phKey: 'phAddress1' },
+    { key: 'address2', labelKey: 'fieldAddress2', phKey: 'phAddress2' },
+    { key: 'city', labelKey: 'fieldCity', phKey: 'phCity' },
+    { key: 'zip', labelKey: 'fieldZip', phKey: 'phZip' },
+    { key: 'phone', labelKey: 'fieldPhone', phKey: 'phPhone' },
   ]
 
   return (
     <BottomSheet onClose={onClose}>
-      <Text style={s.sheetTitle}>Modifier l'adresse</Text>
+      <Text style={s.sheetTitle}>{t('subscription:addressSheetTitle')}</Text>
       <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {textFields.map(f => (
           <View key={f.key}>
-            <Text style={s.fieldLabel}>{f.label}</Text>
+            <Text style={s.fieldLabel}>{t(`subscription:${f.labelKey}`)}</Text>
             <TextInput
               style={s.fieldInput}
               value={fields[f.key]}
               onChangeText={set(f.key)}
-              placeholder={f.placeholder}
+              placeholder={t(`subscription:${f.phKey}`)}
               placeholderTextColor={theme.colors.textLight}
               autoCorrect={false}
             />
           </View>
         ))}
-        <Text style={s.fieldLabel}>PAYS *</Text>
+        <Text style={s.fieldLabel}>{t('subscription:fieldCountry')}</Text>
         <TouchableOpacity style={s.fieldInputSelect} onPress={() => setCountryOpen(!countryOpen)} activeOpacity={0.7}>
           <Text style={selectedCountry ? s.selectValueText : s.selectPlaceholderText}>
-            {selectedCountry?.label ?? 'Sélectionner un pays…'}
+            {selectedCountry ? countryLabel(selectedCountry.value) : t('subscription:selectCountry')}
           </Text>
         </TouchableOpacity>
         {countryOpen && (
@@ -417,7 +403,7 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[s.countryRowText, isSelected && s.countryRowTextActive]}>{opt.label}</Text>
+                  <Text style={[s.countryRowText, isSelected && s.countryRowTextActive]}>{countryLabel(opt.value)}</Text>
                   {isSelected && <CheckIcon color={theme.colors.blue} size={16} />}
                 </TouchableOpacity>
               )
@@ -433,7 +419,7 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
       >
         {saving
           ? <ActivityIndicator color={theme.colors.navy} size="small" />
-          : <Text style={s.btnLimeText}>Enregistrer</Text>
+          : <Text style={s.btnLimeText}>{t('subscription:save')}</Text>
         }
       </TouchableOpacity>
     </BottomSheet>
@@ -445,6 +431,7 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
 function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
   contractId: string; attemptId: string; onClose: () => void; onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const [date, setDate] = useState(new Date(Date.now() + 7 * 86400000))
   const [rescheduleAll, setRescheduleAll] = useState(false)
@@ -478,10 +465,10 @@ function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error ?? 'Erreur')
-      showToast('Commande reprogrammée', 'success')
+      showToast(t('subscription:orderRescheduled'), 'success')
       onSaved()
     } catch (e: any) {
-      showToast(e.message ?? 'Une erreur est survenue', 'error')
+      showToast(e.message ?? t('common:errorGeneric'), 'error')
     } finally {
       setSaving(false)
     }
@@ -489,7 +476,7 @@ function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
 
   return (
     <BottomSheet onClose={onClose}>
-      <Text style={s.sheetTitle}>Reprogrammer la commande</Text>
+      <Text style={s.sheetTitle}>{t('subscription:rescheduleSheetTitle')}</Text>
 
       {Platform.OS === 'ios' ? (
         <DateTimePicker
@@ -500,7 +487,7 @@ function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
           maximumDate={maxDate}
           accentColor={theme.colors.blue}
           onChange={(_, selected) => { if (selected) setDate(selected) }}
-          locale="fr-FR"
+          locale={i18n.language}
         />
       ) : (
         <TouchableOpacity style={s.fieldInputSelect} onPress={openAndroidPicker} activeOpacity={0.7}>
@@ -516,7 +503,7 @@ function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
         <View style={[s.checkbox, rescheduleAll && s.checkboxChecked]}>
           {rescheduleAll && <CheckIcon color={theme.colors.white} size={12} />}
         </View>
-        <Text style={s.checkboxLabel}>Reprogrammer toutes les commandes suivantes</Text>
+        <Text style={s.checkboxLabel}>{t('subscription:rescheduleAll')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -527,7 +514,7 @@ function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
       >
         {saving
           ? <ActivityIndicator color={theme.colors.navy} size="small" />
-          : <Text style={s.btnLimeText}>Confirmer</Text>
+          : <Text style={s.btnLimeText}>{t('subscription:confirm')}</Text>
         }
       </TouchableOpacity>
     </BottomSheet>
@@ -539,17 +526,18 @@ function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
 function PastOrderSheet({ order, currency, shippingAddress, onClose }: {
   order: any; currency: string | null; shippingAddress: any; onClose: () => void
 }) {
+  const { t } = useTranslation()
   const variants: any[] = Array.isArray(order.variantList) ? order.variantList : []
 
   return (
     <BottomSheet onClose={onClose}>
-      <Text style={s.sheetTitle}>{order.orderName ?? 'Détails commande'}</Text>
+      <Text style={s.sheetTitle}>{order.orderName ?? t('subscription:pastOrderSheetFallback')}</Text>
       <Text style={s.sheetSubtitle}>{formatDate(order.billingDate)}</Text>
 
       <View style={s.badgeRow}>
         {(order.status ?? '').toUpperCase() === 'SUCCESS' && (
           <View style={[s.miniBadge, { backgroundColor: 'rgba(30,187,110,0.12)' }]}>
-            <Text style={[s.miniBadgeText, { color: theme.colors.success }]}>PAYÉE</Text>
+            <Text style={[s.miniBadgeText, { color: theme.colors.success }]}>{t('subscription:badgePaid').toUpperCase()}</Text>
           </View>
         )}
         {(() => {
@@ -565,7 +553,7 @@ function PastOrderSheet({ order, currency, shippingAddress, onClose }: {
       <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
         {variants.length > 0 && (
           <>
-            <Text style={[s.sectionCaps, s.sheetSectionCaps]}>PRODUITS</Text>
+            <Text style={[s.sectionCaps, s.sheetSectionCaps]}>{t('subscription:products').toUpperCase()}</Text>
             {variants.map((item: any, i: number) => (
               <View key={i} style={s.productRow}>
                 {(item.image || item.variantImage) ? (
@@ -580,22 +568,22 @@ function PastOrderSheet({ order, currency, shippingAddress, onClose }: {
                   {item.variantTitle && item.variantTitle !== 'Default Title' && (
                     <Text style={s.productRowVariant}>{item.variantTitle}</Text>
                   )}
-                  <Text style={s.productRowMeta}>Qté : {item.quantity ?? 1}</Text>
+                  <Text style={s.productRowMeta}>{t('subscription:qtyLabel', { count: item.quantity ?? 1 })}</Text>
                 </View>
               </View>
             ))}
           </>
         )}
 
-        <Text style={[s.sectionCaps, s.sheetSectionCaps]}>RÉCAPITULATIF</Text>
+        <Text style={[s.sectionCaps, s.sheetSectionCaps]}>{t('subscription:summary').toUpperCase()}</Text>
         <View style={s.recapTotalRow}>
-          <Text style={s.recapTotalLabel}>TOTAL</Text>
+          <Text style={s.recapTotalLabel}>{t('subscription:total').toUpperCase()}</Text>
           <Text style={s.recapTotalValue}>{formatPrice(order.orderAmount, currency)}</Text>
         </View>
 
         {shippingAddress && (
           <>
-            <Text style={[s.sectionCaps, s.sheetSectionCaps]}>ADRESSE DE LIVRAISON</Text>
+            <Text style={[s.sectionCaps, s.sheetSectionCaps]}>{t('subscription:shippingAddress').toUpperCase()}</Text>
             <Text style={s.addressText}>
               {[
                 [shippingAddress.firstName, shippingAddress.lastName].filter(Boolean).join(' '),
@@ -610,7 +598,7 @@ function PastOrderSheet({ order, currency, shippingAddress, onClose }: {
       </ScrollView>
 
       <TouchableOpacity style={s.btnNavy} onPress={onClose} activeOpacity={0.85}>
-        <Text style={s.btnNavyText}>Fermer</Text>
+        <Text style={s.btnNavyText}>{t('subscription:close')}</Text>
       </TouchableOpacity>
     </BottomSheet>
   )
@@ -619,6 +607,7 @@ function PastOrderSheet({ order, currency, shippingAddress, onClose }: {
 // ─── Écran ─────────────────────────────────────────────────
 
 export default function SubscriptionDetailScreen() {
+  const { t } = useTranslation()
   const { contractId, subData } = useLocalSearchParams<{ contractId: string; subData: string }>()
   const { showToast } = useToast()
   const insets = useSafeAreaInsets()
@@ -698,10 +687,10 @@ export default function SubscriptionDetailScreen() {
         body: JSON.stringify({ action, contractId, ...extra }),
       })
       const json = await res.json()
-      if (!json.success) throw new Error(json.error ?? 'Erreur inconnue')
+      if (!json.success) throw new Error(json.error ?? 'Unknown error')
       return true
     } catch (e: any) {
-      showToast(e.message ?? 'Une erreur est survenue', 'error')
+      showToast(e.message ?? t('common:errorGeneric'), 'error')
       return false
     } finally {
       setActionLoading(prev => ({ ...prev, [key]: false }))
@@ -720,10 +709,14 @@ export default function SubscriptionDetailScreen() {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error ?? 'Erreur')
-      const msgs = { pause: 'Abonnement mis en pause', resume: 'Abonnement repris', cancel: 'Abonnement annulé' }
+      const msgs = {
+        pause: t('subscription:actionPaused'),
+        resume: t('subscription:actionResumed'),
+        cancel: t('subscription:actionCancelled'),
+      }
       showToast(msgs[action], 'success')
     } catch (e: any) {
-      showToast(e.message ?? 'Une erreur est survenue', 'error')
+      showToast(e.message ?? t('common:errorGeneric'), 'error')
     } finally {
       setActionLoading(prev => ({ ...prev, [action]: false }))
     }
@@ -731,18 +724,18 @@ export default function SubscriptionDetailScreen() {
 
   const confirmCancel = () => {
     Alert.alert(
-      "Annuler l'abonnement",
-      'Cette action est irréversible. Votre abonnement sera définitivement annulé.',
+      t('subscription:cancelTitle'),
+      t('subscription:cancelBody'),
       [
-        { text: 'Retour', style: 'cancel' },
-        { text: "Annuler l'abonnement", style: 'destructive', onPress: () => callManage('cancel') },
+        { text: t('common:back'), style: 'cancel' },
+        { text: t('subscription:cancelConfirm'), style: 'destructive', onPress: () => callManage('cancel') },
       ]
     )
   }
 
   const isActive = sub.status === 'active'
   const isPaused = sub.status === 'paused'
-  const statusBadge = STATUS_BADGE[sub.status] ?? STATUS_BADGE.cancelled
+  const statusBadge = getSubscriptionStatus(sub.status, true)
   const currency = sub.price_currency ?? null
 
   const unitPrice = sub.price_amount ?? parseFloat(firstLine.currentPrice ?? '0')
@@ -750,12 +743,12 @@ export default function SubscriptionDetailScreen() {
   const subtotal = unitPrice * quantity
 
   const brandKey = (paymentMethod?.brand ?? '').toLowerCase()
-  const brand = CARD_BRANDS[brandKey] ?? { label: (paymentMethod?.brand ?? 'CARTE').toUpperCase(), bg: theme.colors.navy }
+  const brand = CARD_BRANDS[brandKey] ?? { label: (paymentMethod?.brand ?? t('subscription:cardFallback')).toUpperCase(), bg: theme.colors.navy }
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'details', label: 'Détails' },
-    { key: 'upcoming', label: `Prochaines${upcomingOrders.length ? ` (${upcomingOrders.length})` : ''}` },
-    { key: 'past', label: `Passées${pastOrders.length ? ` (${pastOrders.length})` : ''}` },
+    { key: 'details', label: t('subscription:tabDetails') },
+    { key: 'upcoming', label: upcomingOrders.length ? t('subscription:tabUpcomingCount', { count: upcomingOrders.length }) : t('subscription:tabUpcoming') },
+    { key: 'past', label: pastOrders.length ? t('subscription:tabPastCount', { count: pastOrders.length }) : t('subscription:tabPast') },
   ]
 
   // ─── Onglet Détails ───────────────────────────────────────
@@ -773,30 +766,30 @@ export default function SubscriptionDetailScreen() {
             {firstLine.variantTitle && firstLine.variantTitle !== 'Default Title' ? (
               <Text style={s.productVariant}>{firstLine.variantTitle}</Text>
             ) : null}
-            {firstLine.sku ? <Text style={s.productSku}>SKU : {firstLine.sku}</Text> : null}
+            {firstLine.sku ? <Text style={s.productSku}>{t('subscription:skuLabel', { sku: firstLine.sku })}</Text> : null}
 
             <View style={s.divider} />
 
             <View style={s.infoRow}>
-              <Text style={s.infoLabel}>Quantité</Text>
+              <Text style={s.infoLabel}>{t('subscription:quantity')}</Text>
               <Text style={s.infoValue}>{String(quantity)}</Text>
             </View>
             <View style={s.infoRow}>
-              <Text style={s.infoLabel}>Prix actuel</Text>
+              <Text style={s.infoLabel}>{t('subscription:currentPrice')}</Text>
               <Text style={[s.infoValue, { color: theme.colors.blue, fontFamily: theme.typography.fontFamily.bold }]}>
                 {formatPrice(unitPrice, currency)}
               </Text>
             </View>
             <View style={s.infoRow}>
-              <Text style={s.infoLabel}>Sous-total</Text>
+              <Text style={s.infoLabel}>{t('subscription:subtotal')}</Text>
               <Text style={s.infoValue}>{formatPrice(subtotal, currency)}</Text>
             </View>
             <View style={s.infoRow}>
-              <Text style={s.infoLabel}>Livraison</Text>
+              <Text style={s.infoLabel}>{t('subscription:shipping')}</Text>
               <Text style={s.infoValue}>{formatPrice(0, currency)}</Text>
             </View>
             <View style={[s.infoRow, s.totalRow]}>
-              <Text style={s.totalLabel}>TOTAL</Text>
+              <Text style={s.totalLabel}>{t('subscription:total').toUpperCase()}</Text>
               <Text style={s.totalValue}>{formatPrice(subtotal, currency)}</Text>
             </View>
           </View>
@@ -806,7 +799,7 @@ export default function SubscriptionDetailScreen() {
       {/* Prochaine commande */}
       <CascadeIn index={1}>
         <View style={s.card}>
-          <Text style={s.sectionCaps}>PROCHAINE COMMANDE</Text>
+          <Text style={s.sectionCaps}>{t('subscription:nextOrder').toUpperCase()}</Text>
           <Text style={s.nextDate}>{formatDate(sub.next_billing_date)}</Text>
           {upcomingOrders.length > 0 && (
             <View style={s.actionRow}>
@@ -814,28 +807,28 @@ export default function SubscriptionDetailScreen() {
                 style={[s.btnBlueSolid, { flex: 1 }]}
                 onPress={async () => {
                   const ok = await callAction('order-now', { id: upcomingOrders[0].id }, 'order-now')
-                  if (ok) { showToast('Commande déclenchée', 'success'); loadOrders() }
+                  if (ok) { showToast(t('subscription:orderTriggered'), 'success'); loadOrders() }
                 }}
                 disabled={!!actionLoading['order-now']}
                 activeOpacity={0.85}
               >
                 {actionLoading['order-now']
                   ? <ActivityIndicator color={theme.colors.white} size="small" />
-                  : <Text style={s.btnBlueSolidText}>Commander maintenant</Text>
+                  : <Text style={s.btnBlueSolidText}>{t('subscription:orderNow')}</Text>
                 }
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.btnGray, { flex: 1 }]}
                 onPress={async () => {
                   const ok = await callAction('skip', { id: upcomingOrders[0].id }, 'skip-first')
-                  if (ok) { showToast('Commande passée', 'success'); loadOrders() }
+                  if (ok) { showToast(t('subscription:orderSkipped'), 'success'); loadOrders() }
                 }}
                 disabled={!!actionLoading['skip-first']}
                 activeOpacity={0.85}
               >
                 {actionLoading['skip-first']
                   ? <ActivityIndicator color={theme.colors.textMid} size="small" />
-                  : <Text style={s.btnGrayText}>Passer</Text>
+                  : <Text style={s.btnGrayText}>{t('subscription:skip')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -846,14 +839,14 @@ export default function SubscriptionDetailScreen() {
       {/* Fréquence */}
       <CascadeIn index={2}>
         <View style={s.card}>
-          <Text style={s.sectionCaps}>FRÉQUENCE</Text>
+          <Text style={s.sectionCaps}>{t('subscription:frequency').toUpperCase()}</Text>
           <Text style={s.freqValue}>{formatFrequency(sub.frequency_unit, sub.frequency_value)}</Text>
           <TouchableOpacity
             style={[s.btnOutlineBlueSmall, { alignSelf: 'flex-end', marginTop: theme.spacing[3] }]}
             onPress={() => setFreqSheet(true)}
             activeOpacity={0.7}
           >
-            <Text style={s.btnOutlineBlueSmallText}>Modifier →</Text>
+            <Text style={s.btnOutlineBlueSmallText}>{t('subscription:modify')}</Text>
           </TouchableOpacity>
         </View>
       </CascadeIn>
@@ -862,9 +855,9 @@ export default function SubscriptionDetailScreen() {
       <CascadeIn index={3}>
         <View style={s.card}>
           <View style={s.cardHeaderRow}>
-            <Text style={s.sectionCaps}>ADRESSE DE LIVRAISON</Text>
+            <Text style={s.sectionCaps}>{t('subscription:shippingAddress').toUpperCase()}</Text>
             <TouchableOpacity style={s.btnOutlineBlueSmall} onPress={() => setAddressSheet(true)} activeOpacity={0.7}>
-              <Text style={s.btnOutlineBlueSmallText}>Modifier</Text>
+              <Text style={s.btnOutlineBlueSmallText}>{t('subscription:modifyShort')}</Text>
             </TouchableOpacity>
           </View>
           {shippingAddress ? (
@@ -882,7 +875,7 @@ export default function SubscriptionDetailScreen() {
               </Text>
             </>
           ) : (
-            <Text style={s.mutedItalic}>Aucune adresse</Text>
+            <Text style={s.mutedItalic}>{t('subscription:noAddress')}</Text>
           )}
         </View>
       </CascadeIn>
@@ -890,7 +883,7 @@ export default function SubscriptionDetailScreen() {
       {/* Paiement */}
       <CascadeIn index={4}>
         <View style={s.card}>
-          <Text style={s.sectionCaps}>PAIEMENT</Text>
+          <Text style={s.sectionCaps}>{t('subscription:payment').toUpperCase()}</Text>
           {paymentMethod ? (
             <>
               <View style={s.paymentRow}>
@@ -903,15 +896,18 @@ export default function SubscriptionDetailScreen() {
               </View>
               {paymentMethod.expiryMonth && paymentMethod.expiryYear ? (
                 <Text style={s.paymentMeta}>
-                  Expire {String(paymentMethod.expiryMonth).padStart(2, '0')}/{paymentMethod.expiryYear}
+                  {t('subscription:cardExpires', {
+                    month: String(paymentMethod.expiryMonth).padStart(2, '0'),
+                    year: paymentMethod.expiryYear,
+                  })}
                 </Text>
               ) : null}
               {paymentMethod.cardHolderName ? (
-                <Text style={s.paymentHolder}>Titulaire : {paymentMethod.cardHolderName}</Text>
+                <Text style={s.paymentHolder}>{t('subscription:cardHolder', { name: paymentMethod.cardHolderName })}</Text>
               ) : null}
             </>
           ) : (
-            <Text style={s.mutedItalic}>Aucune carte enregistrée</Text>
+            <Text style={s.mutedItalic}>{t('subscription:noCard')}</Text>
           )}
         </View>
       </CascadeIn>
@@ -919,13 +915,13 @@ export default function SubscriptionDetailScreen() {
       {/* Code promo */}
       <CascadeIn index={5}>
         <View style={s.card}>
-          <Text style={s.sectionCaps}>CODE PROMO</Text>
+          <Text style={s.sectionCaps}>{t('subscription:promoCode').toUpperCase()}</Text>
           <View style={s.promoRow}>
             <TextInput
               style={s.promoInput}
               value={promoCode}
               onChangeText={setPromoCode}
-              placeholder="Code promo"
+              placeholder={t('subscription:promoPlaceholder')}
               placeholderTextColor={theme.colors.textLight}
               autoCapitalize="characters"
             />
@@ -933,14 +929,14 @@ export default function SubscriptionDetailScreen() {
               style={[s.promoBtn, (!promoCode.trim() || !!actionLoading['apply-discount']) && { opacity: 0.5 }]}
               onPress={async () => {
                 const ok = await callAction('apply-discount', { discountCode: promoCode.trim() }, 'apply-discount')
-                if (ok) { showToast('Code promo appliqué', 'success'); setPromoCode('') }
+                if (ok) { showToast(t('subscription:promoApplied'), 'success'); setPromoCode('') }
               }}
               disabled={!promoCode.trim() || !!actionLoading['apply-discount']}
               activeOpacity={0.85}
             >
               {actionLoading['apply-discount']
                 ? <ActivityIndicator color={theme.colors.white} size="small" />
-                : <Text style={s.promoBtnText}>Appliquer</Text>
+                : <Text style={s.promoBtnText}>{t('subscription:apply')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -950,7 +946,7 @@ export default function SubscriptionDetailScreen() {
       {/* Gérer */}
       <CascadeIn index={6}>
         <View style={s.card}>
-          <Text style={[s.sectionCaps, { marginBottom: theme.spacing[4] }]}>GÉRER L'ABONNEMENT</Text>
+          <Text style={[s.sectionCaps, { marginBottom: theme.spacing[4] }]}>{t('subscription:manageSection').toUpperCase()}</Text>
           <View style={{ gap: 10 }}>
           {isActive && (
             <TouchableOpacity
@@ -961,7 +957,7 @@ export default function SubscriptionDetailScreen() {
             >
               {actionLoading['pause']
                 ? <ActivityIndicator color={theme.colors.warning} size="small" />
-                : <Text style={[s.manageBtnText, { color: theme.colors.warning }]}>⏸ Mettre en pause</Text>
+                : <Text style={[s.manageBtnText, { color: theme.colors.warning }]}>{t('subscription:pause')}</Text>
               }
             </TouchableOpacity>
           )}
@@ -974,7 +970,7 @@ export default function SubscriptionDetailScreen() {
             >
               {actionLoading['resume']
                 ? <ActivityIndicator color={theme.colors.success} size="small" />
-                : <Text style={[s.manageBtnText, { color: theme.colors.success }]}>▶ Reprendre</Text>
+                : <Text style={[s.manageBtnText, { color: theme.colors.success }]}>{t('subscription:resume')}</Text>
               }
             </TouchableOpacity>
           )}
@@ -986,7 +982,7 @@ export default function SubscriptionDetailScreen() {
           >
             {actionLoading['cancel']
               ? <ActivityIndicator color={theme.colors.error} size="small" />
-              : <Text style={[s.manageBtnText, { color: theme.colors.error }]}>✕ Annuler l'abonnement</Text>
+              : <Text style={[s.manageBtnText, { color: theme.colors.error }]}>{t('subscription:cancel')}</Text>
             }
           </TouchableOpacity>
           </View>
@@ -1003,7 +999,7 @@ export default function SubscriptionDetailScreen() {
         <CascadeIn index={0}>
           <View style={s.emptyCard}>
             <Text style={s.emptyIcon}>📋</Text>
-            <Text style={s.emptyTitle}>Aucune commande planifiée</Text>
+            <Text style={s.emptyTitle}>{t('subscription:noUpcomingOrders')}</Text>
           </View>
         </CascadeIn>
       ) : upcomingOrders.map((order: any, index: number) => {
@@ -1016,7 +1012,7 @@ export default function SubscriptionDetailScreen() {
               <View style={s.cardHeaderRow}>
                 <Text style={s.upcomingDate}>{formatDateShort(order.billingDate)}</Text>
                 <View style={[s.miniBadge, { backgroundColor: 'rgba(240,196,23,0.15)' }]}>
-                  <Text style={[s.miniBadgeText, { color: '#d4a000' }]}>PLANIFIÉE</Text>
+                  <Text style={[s.miniBadgeText, { color: '#d4a000' }]}>{t('subscription:badgePlanned').toUpperCase()}</Text>
                 </View>
               </View>
 
@@ -1036,7 +1032,7 @@ export default function SubscriptionDetailScreen() {
                     {item.variantTitle && item.variantTitle !== 'Default Title' ? (
                       <Text style={s.productRowVariant}>{item.variantTitle}</Text>
                     ) : null}
-                    <Text style={s.productRowMeta}>Qté : {item.quantity ?? 1}</Text>
+                    <Text style={s.productRowMeta}>{t('subscription:qtyLabel', { count: item.quantity ?? 1 })}</Text>
                   </View>
                   <Text style={s.productRowPrice}>
                     {formatPrice(item.currentPrice ?? item.originalPrice ?? sub.price_amount, currency)}
@@ -1051,14 +1047,14 @@ export default function SubscriptionDetailScreen() {
                   style={[s.btnGraySm, { flex: 1 }]}
                   onPress={async () => {
                     const ok = await callAction('skip', { id: order.id }, skipKey)
-                    if (ok) { showToast('Commande passée', 'success'); loadOrders() }
+                    if (ok) { showToast(t('subscription:orderSkipped'), 'success'); loadOrders() }
                   }}
                   disabled={!!actionLoading[skipKey]}
                   activeOpacity={0.85}
                 >
                   {actionLoading[skipKey]
                     ? <ActivityIndicator color={theme.colors.textMid} size="small" />
-                    : <Text style={s.btnGraySmText}>Passer</Text>
+                    : <Text style={s.btnGraySmText}>{t('subscription:skip')}</Text>
                   }
                 </TouchableOpacity>
                 {index === 0 && (
@@ -1067,7 +1063,7 @@ export default function SubscriptionDetailScreen() {
                     onPress={() => setRescheduleSheet(order.id)}
                     activeOpacity={0.85}
                   >
-                    <Text style={s.btnBlueTintText}>Reprogrammer</Text>
+                    <Text style={s.btnBlueTintText}>{t('subscription:reschedule')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1086,7 +1082,7 @@ export default function SubscriptionDetailScreen() {
         <CascadeIn index={0}>
           <View style={s.emptyCard}>
             <Text style={s.emptyIcon}>📦</Text>
-            <Text style={s.emptyTitle}>Aucune commande passée</Text>
+            <Text style={s.emptyTitle}>{t('subscription:noPastOrders')}</Text>
           </View>
         </CascadeIn>
       ) : pastOrders.map((order: any, index: number) => {
@@ -1098,7 +1094,7 @@ export default function SubscriptionDetailScreen() {
             <View style={s.cardCompact}>
               <View style={s.cardHeaderRow}>
                 <View>
-                  <Text style={s.pastOrderNumber}>{order.orderName ?? `Commande ${index + 1}`}</Text>
+                  <Text style={s.pastOrderNumber}>{order.orderName ?? t('subscription:pastOrderFallback', { index: index + 1 })}</Text>
                   <Text style={s.pastOrderDate}>{formatDateShort(order.billingDate)}</Text>
                 </View>
                 <View style={[s.miniBadge, { backgroundColor: orderStatus.bg }]}>
@@ -1122,7 +1118,7 @@ export default function SubscriptionDetailScreen() {
                     {item.variantTitle && item.variantTitle !== 'Default Title' ? (
                       <Text style={s.productRowVariant}>{item.variantTitle}</Text>
                     ) : null}
-                    <Text style={s.productRowMeta}>Qté : {item.quantity ?? 1}</Text>
+                    <Text style={s.productRowMeta}>{t('subscription:qtyLabel', { count: item.quantity ?? 1 })}</Text>
                   </View>
                 </View>
               ))}
@@ -1131,11 +1127,11 @@ export default function SubscriptionDetailScreen() {
 
               <View style={s.cardHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing[2] }}>
-                  <Text style={s.recapTotalLabel}>TOTAL</Text>
+                  <Text style={s.recapTotalLabel}>{t('subscription:total').toUpperCase()}</Text>
                   <Text style={s.recapTotalValue}>{formatPrice(order.orderAmount, currency)}</Text>
                 </View>
                 <TouchableOpacity onPress={() => setPastOrderSheet(order)} activeOpacity={0.7}>
-                  <Text style={s.detailsLink}>Voir les détails →</Text>
+                  <Text style={s.detailsLink}>{t('subscription:seeDetailsArrow')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1169,9 +1165,9 @@ export default function SubscriptionDetailScreen() {
       <View style={[s.header, { paddingTop: insets.top }]}>
         <View style={s.headerInner}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn} activeOpacity={0.7}>
-            <Text style={s.backText}>← Retour</Text>
+            <Text style={s.backText}>{t('tracking:back')}</Text>
           </TouchableOpacity>
-          <Text style={s.headerTitle} numberOfLines={1}>{sub.product_name ?? 'Abonnement'}</Text>
+          <Text style={s.headerTitle} numberOfLines={1}>{sub.product_name ?? t('subscription:headerFallback')}</Text>
           <View style={s.headerRight}>
             <View style={[s.miniBadge, { backgroundColor: statusBadge.bg }]}>
               <Text style={[s.miniBadgeText, { color: statusBadge.color }]}>{statusBadge.label}</Text>
@@ -1237,7 +1233,7 @@ export default function SubscriptionDetailScreen() {
           onSaved={(addr) => {
             setAddressSheet(false)
             setShippingAddress(addr)
-            showToast('Adresse mise à jour', 'success')
+            showToast(t('subscription:addressUpdated'), 'success')
             loadOrders()
           }}
         />
