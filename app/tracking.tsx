@@ -4,85 +4,72 @@ import {
   Animated, Easing, Platform,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../lib/supabase'
 import theme from '../lib/theme'
+import i18n from '../lib/i18n'
+import { formatDate, formatDateShort, formatTime } from '../lib/i18n/format'
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 const EVENTS_PREVIEW_COUNT = 10
 const MONO_FONT = Platform.select({ ios: 'Menlo', default: 'monospace' })
 
 // ─── Statuts ───────────────────────────────────────────────
+// Styles + icônes ici ; libellés résolus via i18n (tracking:status.*).
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; icon: string }> = {
-  Delivered: { label: 'Livré', bg: 'rgba(30,187,110,0.12)', color: theme.colors.success, icon: '✓' },
-  OutForDelivery: { label: 'En livraison', bg: 'rgba(39,100,255,0.10)', color: theme.colors.blue, icon: '🚚' },
-  InTransit: { label: 'En transit', bg: 'rgba(39,100,255,0.10)', color: theme.colors.blue, icon: '✈️' },
-  Exception: { label: 'Incident', bg: 'rgba(227,44,43,0.10)', color: theme.colors.error, icon: '!' },
-  DeliveryFailure: { label: 'Échec de livraison', bg: 'rgba(227,44,43,0.10)', color: theme.colors.error, icon: '!' },
-  AvailableForPickup: { label: 'Point relais', bg: 'rgba(201,255,0,0.3)', color: '#3a6000', icon: '📦' },
-  InfoReceived: { label: 'Infos reçues', bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '📬' },
-  Expired: { label: 'Expiré', bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '⏰' },
-  NotFound: { label: 'Introuvable', bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '?' },
+const STATUS_STYLE: Record<string, { bg: string; color: string; icon: string }> = {
+  Delivered: { bg: 'rgba(30,187,110,0.12)', color: theme.colors.success, icon: '✓' },
+  OutForDelivery: { bg: 'rgba(39,100,255,0.10)', color: theme.colors.blue, icon: '🚚' },
+  InTransit: { bg: 'rgba(39,100,255,0.10)', color: theme.colors.blue, icon: '✈️' },
+  Exception: { bg: 'rgba(227,44,43,0.10)', color: theme.colors.error, icon: '!' },
+  DeliveryFailure: { bg: 'rgba(227,44,43,0.10)', color: theme.colors.error, icon: '!' },
+  AvailableForPickup: { bg: 'rgba(201,255,0,0.3)', color: '#3a6000', icon: '📦' },
+  InfoReceived: { bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '📬' },
+  Expired: { bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '⏰' },
+  NotFound: { bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '?' },
 }
 
-const FALLBACK_STATUS = { label: 'En cours', bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '📦' }
+const FALLBACK_STYLE = { bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid, icon: '📦' }
+
+const resolveStatus = (key: string) => {
+  const known = !!STATUS_STYLE[key]
+  const style = known ? STATUS_STYLE[key] : FALLBACK_STYLE
+  const label = i18n.t(known ? `tracking:status.${key}` : 'tracking:status.fallback')
+  return { ...style, label }
+}
 
 const MILESTONE_ORDER = ['InfoReceived', 'PickedUp', 'Departure', 'Arrival', 'AvailableForPickup', 'OutForDelivery', 'Delivered']
 
-const MILESTONE_META: Record<string, { label: string; icon: string }> = {
-  InfoReceived: { label: 'Infos reçues', icon: '📬' },
-  PickedUp: { label: 'Collecté', icon: '📦' },
-  Departure: { label: 'Départ', icon: '✈️' },
-  Arrival: { label: 'Arrivée', icon: '🛬' },
-  AvailableForPickup: { label: 'Point relais', icon: '🏪' },
-  OutForDelivery: { label: 'En livraison', icon: '🚚' },
-  Delivered: { label: 'Livré', icon: '✅' },
+const MILESTONE_ICON: Record<string, string> = {
+  InfoReceived: '📬',
+  PickedUp: '📦',
+  Departure: '✈️',
+  Arrival: '🛬',
+  AvailableForPickup: '🏪',
+  OutForDelivery: '🚚',
+  Delivered: '✅',
 }
+
+const milestoneMeta = (stage: string) => ({
+  icon: MILESTONE_ICON[stage] ?? '•',
+  label: MILESTONE_ICON[stage] ? i18n.t(`tracking:milestone.${stage}`) : stage,
+})
 
 // ─── Traductions des événements transporteurs ──────────────
-
-const TRANSLATIONS: Record<string, string> = {
-  'your shipment has been delivered successfully': 'Votre colis a été livré avec succès',
-  'your parcel has been delivered': 'Votre colis a été livré',
-  'delivered': 'Livré',
-  'delivered to your safe place': 'Livré dans votre lieu sûr',
-  'delivered to your neighbour': 'Livré chez votre voisin',
-  'out for delivery': 'En cours de livraison',
-  'your parcel is out for delivery': 'Votre colis est en cours de livraison',
-  'courier received your parcel': 'Le livreur a récupéré votre colis',
-  'we have your parcel': 'Nous avons votre colis',
-  'we have received your parcel': 'Nous avons reçu votre colis',
-  'parcel received at the national hub': 'Colis reçu au centre de tri national',
-  'arrived at the local depot': 'Arrivé au dépôt local',
-  'on its way to the local depot': 'En route vers le dépôt local',
-  'your parcel is at the local depot ready for delivery': 'Votre colis est au dépôt local, prêt pour la livraison',
-  'in transit': 'En transit',
-  'arrived at facility': 'Arrivé au centre de tri',
-  'departed from facility': 'Parti du centre de tri',
-  'arrival at processing center': "Arrivée au centre de traitement",
-  'departure from processing center': 'Départ du centre de traitement',
-  'flight departed': "L'avion a décollé",
-  'flight arrived': "L'avion a atterri",
-  'customs clearance started': 'Dédouanement en cours',
-  'customs clearance completed': 'Dédouanement terminé',
-  'import customs clearance completed': "Dédouanement à l'import terminé",
-  'export customs clearance completed': "Dédouanement à l'export terminé",
-  'handed over to airline': 'Remis à la compagnie aérienne',
-  'shipment information received': "Informations d'expédition reçues",
-  'information received': 'Informations reçues',
-  'sender preparing the parcel': "L'expéditeur prépare le colis",
-  'picked up': 'Colis collecté',
-  'shipment picked up': 'Colis collecté',
-  'available for pickup': 'Disponible en point relais',
-  'delivery attempted': 'Tentative de livraison',
-  'delivery failed': 'Échec de la livraison',
-}
+// Le transporteur renvoie des libellés en anglais ; on les remappe via
+// tracking:events.* (identité pour la locale EN, traduction pour fr/de).
 
 const translateDesc = (desc: string | null | undefined): string => {
   if (!desc) return '—'
-  return TRANSLATIONS[desc.trim().toLowerCase()] ?? desc
+  const norm = desc.trim().toLowerCase()
+  // Accès direct à la table pour éviter tout souci de séparateur ('.'/'':')
+  // dans les libellés transporteurs. Repli sur fr puis sur le texte brut.
+  const table =
+    (i18n.getResource(i18n.language, 'tracking', 'events') as Record<string, string> | undefined) ??
+    (i18n.getResource('fr', 'tracking', 'events') as Record<string, string> | undefined)
+  return table?.[norm] ?? desc
 }
 
 // ─── Formatters ────────────────────────────────────────────
@@ -90,17 +77,15 @@ const translateDesc = (desc: string | null | undefined): string => {
 const formatEventTime = (iso: string | null) => {
   if (!iso) return '—'
   const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso
-  const day = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
-  return `${day} à ${time}`
+  if (isNaN(d.getTime())) return iso ?? '—'
+  return i18n.t('common:dateAtTime', { date: formatDate(d), time: formatTime(d) })
 }
 
 const formatShortDate = (iso: string | null) => {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return formatDateShort(d)
 }
 
 interface TrackingData {
@@ -214,7 +199,7 @@ function MilestoneBar({ milestones }: { milestones: Array<{ stage: string; time:
         {steps.map((step, i) => {
           const done = i <= lastDone && !!timeMap[step]
           const isCurrent = i === lastDone + 1
-          const meta = MILESTONE_META[step] ?? { label: step, icon: '•' }
+          const meta = milestoneMeta(step)
 
           const circle = done ? (
             <PopIn delay={i * 80}>
@@ -254,6 +239,7 @@ function MilestoneBar({ milestones }: { milestones: Array<{ stage: string; time:
 // ─── Écran ─────────────────────────────────────────────────
 
 export default function TrackingScreen() {
+  const { t } = useTranslation()
   const { tracking_number, order_number } = useLocalSearchParams<{ tracking_number: string; order_number: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -291,7 +277,7 @@ export default function TrackingScreen() {
     }
   }
 
-  const status = data ? (STATUS_CONFIG[data.status] ?? FALLBACK_STATUS) : null
+  const status = data ? resolveStatus(data.status) : null
   const events = data?.events ?? []
   const visibleEvents = showAllEvents ? events : events.slice(0, EVENTS_PREVIEW_COUNT)
   const hiddenCount = events.length - EVENTS_PREVIEW_COUNT
@@ -301,10 +287,10 @@ export default function TrackingScreen() {
       {/* ── HEADER ── */}
       <View style={[styles.header, { paddingTop: insets.top + theme.spacing[2] }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Text style={styles.backText}>← Retour</Text>
+          <Text style={styles.backText}>{t('tracking:back')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {order_number ? `Commande #${order_number}` : 'Suivi colis'}
+          {order_number ? t('tracking:orderNumber', { number: order_number }) : t('tracking:parcelTracking')}
         </Text>
         <View style={styles.headerRight}>
           {status && (
@@ -344,12 +330,10 @@ export default function TrackingScreen() {
           <View style={styles.errorCircle}>
             <Text style={styles.errorIcon}>📭</Text>
           </View>
-          <Text style={styles.errorTitle}>Tracking non disponible</Text>
-          <Text style={styles.errorSub}>
-            Le numéro de suivi n'est pas encore disponible pour cette commande.
-          </Text>
+          <Text style={styles.errorTitle}>{t('tracking:unavailableTitle')}</Text>
+          <Text style={styles.errorSub}>{t('tracking:unavailableSub')}</Text>
           <TouchableOpacity style={styles.errorBtn} onPress={() => router.back()} activeOpacity={0.8}>
-            <Text style={styles.errorBtnText}>← Retour aux commandes</Text>
+            <Text style={styles.errorBtnText}>{t('tracking:backToOrders')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -380,14 +364,14 @@ export default function TrackingScreen() {
                 {data.origin_country && data.destination_country && (
                   <View style={styles.infoPill}>
                     <Text style={styles.infoPillText}>
-                      {data.origin_country} → {data.destination_country}
+                      {t('tracking:route', { origin: data.origin_country, destination: data.destination_country })}
                     </Text>
                   </View>
                 )}
                 {data.days_of_transit != null && (
                   <View style={styles.infoPill}>
                     <Text style={styles.infoPillText}>
-                      {data.days_of_transit} jour{data.days_of_transit > 1 ? 's' : ''} de transit
+                      {t('tracking:transitDays', { count: data.days_of_transit })}
                     </Text>
                   </View>
                 )}
@@ -402,7 +386,7 @@ export default function TrackingScreen() {
           {data.milestones.length > 0 && (
             <CascadeIn index={1}>
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>PROGRESSION</Text>
+                <Text style={styles.sectionTitle}>{t('tracking:progress').toUpperCase()}</Text>
                 <MilestoneBar milestones={data.milestones} />
               </View>
             </CascadeIn>
@@ -412,7 +396,7 @@ export default function TrackingScreen() {
           {events.length > 0 && (
             <CascadeIn index={2}>
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>HISTORIQUE</Text>
+                <Text style={styles.sectionTitle}>{t('tracking:history').toUpperCase()}</Text>
                 {visibleEvents.map((ev, i) => (
                   <View
                     key={i}
@@ -443,7 +427,7 @@ export default function TrackingScreen() {
                     activeOpacity={0.7}
                   >
                     <Text style={styles.showMoreText}>
-                      Voir tout l'historique ({events.length}) ↓
+                      {t('tracking:seeAllHistory', { count: events.length })}
                     </Text>
                   </TouchableOpacity>
                 )}
