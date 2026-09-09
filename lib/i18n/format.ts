@@ -48,5 +48,27 @@ export function formatCurrency(value: number, currency = 'EUR'): string {
   return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency,
+    minimumFractionDigits: 2,
   }).format(value)
+}
+
+/**
+ * Fréquence d'abonnement : "Toutes les 2 semaines" / "Every 2 weeks" /
+ * "Alle 2 Wochen". Utilise les clés i18n `subscription:frequency*`.
+ */
+export function formatFrequency(
+  unit: string | null | undefined,
+  value: number | null | undefined,
+): string {
+  if (!unit || value == null) return '—'
+  const u = unit.toLowerCase()
+  const unitKey = u.startsWith('week')
+    ? 'week'
+    : u.startsWith('month')
+      ? 'month'
+      : u.startsWith('day')
+        ? 'day'
+        : null
+  if (!unitKey) return `${value} ${unit}`
+  return i18n.t(`subscription:frequency_${unitKey}`, { count: value })
 }

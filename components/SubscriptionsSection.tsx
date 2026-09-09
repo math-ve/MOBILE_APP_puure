@@ -4,9 +4,12 @@ import {
   Linking, Alert, ActivityIndicator, Animated, Easing, Image,
 } from 'react-native'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../lib/supabase'
 import theme from '../lib/theme'
+import { getSubscriptionStatus } from '../lib/statuses'
+import { formatDate as formatLocaleDate, formatCurrency, formatFrequency } from '../lib/i18n/format'
 import { useToast } from '../hooks/useToast'
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
@@ -14,36 +17,10 @@ const SITE_URL = 'https://puurefilters.com'
 
 // ─── Helpers ───────────────────────────────────────────────
 
-const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
-  active: { label: 'ACTIF', bg: 'rgba(30,187,110,0.2)', color: theme.colors.success },
-  paused: { label: 'PAUSÉ', bg: 'rgba(255,92,0,0.2)', color: theme.colors.warning },
-  cancelled: { label: 'ANNULÉ', bg: 'rgba(227,44,43,0.2)', color: theme.colors.error },
-}
-const getStatus = (status: string) => STATUS_MAP[status?.toLowerCase()] ?? STATUS_MAP.cancelled
+const formatDate = (iso: string | null) => (iso ? formatLocaleDate(iso) : '—')
 
-const formatDate = (iso: string | null) => {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-const formatFrequency = (unit: string | null, value: number | null) => {
-  if (!unit || value == null) return '—'
-  const labels: Record<string, string> = {
-    week: 'semaines', weeks: 'semaines',
-    month: 'mois', months: 'mois',
-    day: 'jours', days: 'jours',
-  }
-  const label = labels[unit.toLowerCase()] ?? unit
-  const prefix = unit.toLowerCase().startsWith('week') ? 'Toutes les' : 'Tous les'
-  return `${prefix} ${value} ${label}`
-}
-
-const formatPrice = (amount: number | null, currency: string | null) => {
-  if (amount == null) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency', currency: currency ?? 'EUR', minimumFractionDigits: 2,
-  }).format(amount)
-}
+const formatPrice = (amount: number | null, currency: string | null) =>
+  amount == null ? '—' : formatCurrency(amount, currency ?? 'EUR')
 
 const getProductImage = (sub: any): string | null =>
   sub.contract_details_json?.[0]?.variantImage ?? null
@@ -112,6 +89,7 @@ export interface SubscriptionsSectionHandle {
  * Le parent peut déclencher un reload via ref.
  */
 const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref) => {
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -168,15 +146,17 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
         body: JSON.stringify({ user_id: session.user.id, subscription_contract_id: contractId, action }),
       })
       const json = await res.json()
-      if (!json.success) throw new Error(json.error ?? 'Erreur inconnue')
+      if (!json.success) throw new Error(json.error ?? 'Unknown error')
       await triggerSync().catch(() => {})
       await loadSubscriptions()
       const messages: Record<string, string> = {
-        pause: 'Abonnement mis en pause', resume: 'Abonnement repris', cancel: 'Abonnement annulé',
+        pause: t('subscription:actionPaused'),
+        resume: t('subscription:actionResumed'),
+        cancel: t('subscription:actionCancelled'),
       }
-      showToast(messages[action] ?? 'Action réussie', 'success')
+      showToast(messages[action] ?? t('subscription:actionSuccess'), 'success')
     } catch {
-      showToast('Une erreur est survenue', 'error')
+      showToast(t('common:errorGeneric'), 'error')
     } finally {
       setActionLoading(prev => ({ ...prev, [key]: false }))
     }
@@ -184,23 +164,23 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
 
   const confirmCancel = (contractId: string) => {
     Alert.alert(
-      'Annuler l\'abonnement',
-      'Cette action est irréversible. Votre abonnement sera définitivement annulé.',
+      t('subscription:cancelTitle'),
+      t('subscription:cancelBody'),
       [
-        { text: 'Retour', style: 'cancel' },
-        { text: 'Annuler l\'abonnement', style: 'destructive', onPress: () => callManage(contractId, 'cancel') },
+        { text: t('common:back'), style: 'cancel' },
+        { text: t('subscription:cancelConfirm'), style: 'destructive', onPress: () => callManage(contractId, 'cancel') },
       ]
     )
   }
 
   const openManageMenu = (contractId: string) => {
     Alert.alert(
-      'Gérer l\'abonnement',
-      'Que souhaitez-vous faire ?',
+      t('subscription:manageTitle'),
+      t('subscription:manageBody'),
       [
-        { text: '⏸ Mettre en pause', onPress: () => callManage(contractId, 'pause') },
-        { text: '✕ Annuler l\'abonnement', style: 'destructive', onPress: () => confirmCancel(contractId) },
-        { text: 'Retour', style: 'cancel' },
+        { text: t('subscription:menuPause'), onPress: () => callManage(contractId, 'pause') },
+        { text: t('subscription:menuCancel'), style: 'destructive', onPress: () => confirmCancel(contractId) },
+        { text: t('common:back'), style: 'cancel' },
       ]
     )
   }
@@ -209,7 +189,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
   const historySubs = subscriptions.filter(s => s.status !== 'active')
 
   const renderBanner = (sub: any, compact: boolean) => {
-    const status = getStatus(sub.status)
+    const status = getSubscriptionStatus(sub.status, true)
     const image = getProductImage(sub)
     return (
       <LinearGradient colors={[theme.colors.navy, theme.colors.navyDark]} style={compact ? styles.bannerCompact : styles.banner}>
@@ -223,8 +203,11 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
           {!compact && <Text style={styles.bannerId}>#{sub.appstle_subscription_id}</Text>}
           {sub.status === 'cancelled' && (
             <Text style={styles.cancelledAt}>
-              {sub.cancelled_at ? `Annulé le ${formatDate(sub.cancelled_at)}`
-                : sub.updated_at ? `Annulé le ${formatDate(sub.updated_at)}` : 'Annulé'}
+              {sub.cancelled_at
+                ? t('subscription:cancelledOn', { date: formatDate(sub.cancelled_at) })
+                : sub.updated_at
+                  ? t('subscription:cancelledOn', { date: formatDate(sub.updated_at) })
+                  : t('subscription:cancelledShort')}
             </Text>
           )}
         </View>
@@ -235,15 +218,15 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
   const renderInfoRows = (sub: any) => (
     <View style={styles.infoSection}>
       <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>📅  Prochaine facturation</Text>
+        <Text style={styles.infoLabel}>{t('subscription:nextBilling')}</Text>
         <Text style={styles.infoValue}>{formatDate(sub.next_billing_date)}</Text>
       </View>
       <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>🔄  Fréquence</Text>
+        <Text style={styles.infoLabel}>{t('subscription:frequencyLabel')}</Text>
         <Text style={styles.infoValue}>{formatFrequency(sub.frequency_unit, sub.frequency_value)}</Text>
       </View>
       <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>💳  Montant</Text>
+        <Text style={styles.infoLabel}>{t('subscription:amountLabel')}</Text>
         <Text style={styles.infoValue}>{formatPrice(sub.price_amount, sub.price_currency)}</Text>
       </View>
     </View>
@@ -279,10 +262,10 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
   if (subscriptions.length === 0) {
     return (
       <View style={styles.emptyCard}>
-        <Text style={styles.emptyCardTitle}>Aucun abonnement actif</Text>
-        <Text style={styles.emptyCardSub}>Recevez vos filtres automatiquement et économisez.</Text>
+        <Text style={styles.emptyCardTitle}>{t('subscription:noActiveSub')}</Text>
+        <Text style={styles.emptyCardSub}>{t('subscription:noActiveSubText')}</Text>
         <TouchableOpacity style={styles.btnBlue} onPress={() => Linking.openURL(SITE_URL)} activeOpacity={0.85}>
-          <Text style={styles.btnBlueText}>Voir nos abonnements →</Text>
+          <Text style={styles.btnBlueText}>{t('subscription:seeOurSubs')}</Text>
         </TouchableOpacity>
       </View>
     )
@@ -290,7 +273,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
 
   return (
     <>
-      <Text style={styles.sectionHeading}>MON ABONNEMENT</Text>
+      <Text style={styles.sectionHeading}>{t('subscription:sectionHeading').toUpperCase()}</Text>
 
       {/* Abonnements actifs */}
       {activeSubs.map((sub, index) => {
@@ -307,10 +290,10 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
                   onPress={() => router.push({ pathname: '/subscription-detail', params: { contractId: cid, subData: JSON.stringify(sub) } })}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.btnDetailText}>→ Voir les détails</Text>
+                  <Text style={styles.btnDetailText}>{t('subscription:seeDetails')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.btnManage} onPress={() => openManageMenu(cid)} activeOpacity={0.7}>
-                  <Text style={styles.btnManageText}>Gérer l'abonnement</Text>
+                  <Text style={styles.btnManageText}>{t('subscription:manageSub')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -321,7 +304,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
       {/* Historique — pausés / annulés */}
       {historySubs.length > 0 && (
         <>
-          <Text style={styles.historyTitle}>HISTORIQUE</Text>
+          <Text style={styles.historyTitle}>{t('subscription:history').toUpperCase()}</Text>
           {historySubs.map((sub, index) => {
             const cid = sub.appstle_subscription_id
             const isPaused = sub.status === 'paused'
@@ -335,7 +318,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
                     <>
                       <View style={styles.divider} />
                       <View style={styles.actions}>
-                        {renderActionButton(sub, 'resume', '▶ Reprendre', theme.colors.success, 'rgba(30,187,110,0.08)', 'rgba(30,187,110,0.3)')}
+                        {renderActionButton(sub, 'resume', t('subscription:resume'), theme.colors.success, 'rgba(30,187,110,0.08)', 'rgba(30,187,110,0.3)')}
                       </View>
                     </>
                   )}
@@ -348,7 +331,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
 
       {/* Lien gérer sur le site */}
       <TouchableOpacity onPress={() => Linking.openURL(`${SITE_URL}/account`)} activeOpacity={0.7} style={styles.manageLink}>
-        <Text style={styles.manageLinkText}>Gérer sur le site →</Text>
+        <Text style={styles.manageLinkText}>{t('subscription:manageOnSite')}</Text>
       </TouchableOpacity>
     </>
   )

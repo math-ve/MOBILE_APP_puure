@@ -4,42 +4,26 @@ import {
   TouchableOpacity, Linking, Animated, Easing,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
+import { getOrderStatus } from '../../lib/statuses'
+import { formatDate as formatLocaleDate, formatCurrency } from '../../lib/i18n/format'
 import { useToast } from '../../hooks/useToast'
 import SubscriptionsSection, { SubscriptionsSectionHandle } from '../../components/SubscriptionsSection'
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 
-// ─── Statuts ───────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────
 
-const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
-  unfulfilled: { label: 'À expédier', bg: 'rgba(255,92,0,0.10)', color: theme.colors.warning },
-  fulfilled: { label: 'Expédiée', bg: 'rgba(39,100,255,0.10)', color: theme.colors.blue },
-  delivered: { label: 'Livrée', bg: 'rgba(30,187,110,0.12)', color: theme.colors.success },
-  cancelled: { label: 'Annulée', bg: 'rgba(227,44,43,0.10)', color: theme.colors.error },
-  shipped: { label: 'En transit', bg: 'rgba(39,100,255,0.10)', color: theme.colors.blue },
-}
-
-const FALLBACK_STATUS = { label: 'En cours', bg: 'rgba(35,48,86,0.08)', color: theme.colors.textMid }
-
-const getStatus = (status: string) =>
-  STATUS_MAP[status?.toLowerCase()] ?? FALLBACK_STATUS
-
-const formatDate = (iso: string | null) => {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-}
+const formatDate = (iso: string | null) => (iso ? formatLocaleDate(iso) : '—')
 
 const formatPrice = (amount: number | string | null, currency: string | null) => {
   if (amount == null) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: currency ?? 'EUR',
-    minimumFractionDigits: 2,
-  }).format(typeof amount === 'string' ? parseFloat(amount) : amount)
+  const value = typeof amount === 'string' ? parseFloat(amount) : amount
+  return formatCurrency(value, currency ?? 'EUR')
 }
 
 // ─── Animations ────────────────────────────────────────────
@@ -95,6 +79,7 @@ function SkeletonCard() {
 // ─── Écran ─────────────────────────────────────────────────
 
 export default function OrdersScreen() {
+  const { t } = useTranslation()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { showToast } = useToast()
@@ -132,9 +117,9 @@ export default function OrdersScreen() {
         body: JSON.stringify({ user_id: session.user.id }),
       })
       await loadOrders()
-      showToast('Commandes mises à jour', 'success')
+      showToast(t('orders:updated'), 'success')
     } catch {
-      showToast('Erreur de synchronisation', 'error')
+      showToast(t('orders:syncError'), 'error')
     }
   }
 
@@ -166,7 +151,7 @@ export default function OrdersScreen() {
           { paddingTop: insets.top + theme.spacing[5], shadowOpacity: headerShadowOpacity },
         ]}
       >
-        <Text style={styles.pageTitle}>Mes abonnements</Text>
+        <Text style={styles.pageTitle}>{t('orders:pageTitle')}</Text>
       </Animated.View>
 
       <Animated.ScrollView
@@ -185,7 +170,7 @@ export default function OrdersScreen() {
         <SubscriptionsSection ref={subsRef} />
 
         {/* ── SECTION COMMANDES ── */}
-        <Text style={styles.ordersHeading}>MES COMMANDES</Text>
+        <Text style={styles.ordersHeading}>{t('orders:myOrders').toUpperCase()}</Text>
 
         {loading ? (
           <>
@@ -200,20 +185,20 @@ export default function OrdersScreen() {
               <View style={styles.emptyCircle}>
                 <Text style={styles.emptyIcon}>📦</Text>
               </View>
-              <Text style={styles.emptyTitle}>Aucune commande</Text>
-              <Text style={styles.emptySub}>Vos commandes apparaîtront ici</Text>
+              <Text style={styles.emptyTitle}>{t('orders:emptyTitle')}</Text>
+              <Text style={styles.emptySub}>{t('orders:emptySub')}</Text>
               <TouchableOpacity
                 style={styles.btnBlue}
                 onPress={() => Linking.openURL('https://puurefilters.com')}
                 activeOpacity={0.85}
               >
-                <Text style={styles.btnBlueText}>Découvrir nos produits →</Text>
+                <Text style={styles.btnBlueText}>{t('orders:discoverProducts')}</Text>
               </TouchableOpacity>
             </View>
           </CascadeIn>
         ) : (
           orders.map((order, index) => {
-            const status = getStatus(order.status)
+            const status = getOrderStatus(order.status)
             const items: any[] = Array.isArray(order.line_items) ? order.line_items : []
             const visibleItems = items.slice(0, 2)
             const hiddenCount = items.length - visibleItems.length
@@ -225,7 +210,7 @@ export default function OrdersScreen() {
                   {/* Header commande */}
                   <View style={styles.cardHeader}>
                     <View style={{ flex: 1, marginRight: theme.spacing[3] }}>
-                      <Text style={styles.orderNumber}>#{order.order_number}</Text>
+                      <Text style={styles.orderNumber}>{t('orders:orderNumber', { number: order.order_number })}</Text>
                       <Text style={styles.orderDate}>{formatDate(order.shopify_created_at)}</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
@@ -247,7 +232,7 @@ export default function OrdersScreen() {
                     ))}
                     {hiddenCount > 0 && (
                       <Text style={styles.moreProducts}>
-                        + {hiddenCount} autre{hiddenCount > 1 ? 's' : ''}
+                        {t('orders:moreItems', { count: hiddenCount })}
                       </Text>
                     )}
                   </View>
@@ -257,7 +242,7 @@ export default function OrdersScreen() {
                   {/* Footer */}
                   <View style={styles.cardFooter}>
                     <View style={styles.totalRow}>
-                      <Text style={styles.totalLabel}>TOTAL</Text>
+                      <Text style={styles.totalLabel}>{t('orders:total').toUpperCase()}</Text>
                       <Text style={styles.totalValue}>
                         {formatPrice(order.total_price, order.currency)}
                       </Text>
@@ -274,7 +259,7 @@ export default function OrdersScreen() {
                         })}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.trackBtnText}>📦 Suivre ma commande →</Text>
+                        <Text style={styles.trackBtnText}>{t('orders:trackOrder')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -288,8 +273,8 @@ export default function OrdersScreen() {
         {!loading && orders.length > 0 && (
           <View style={styles.helpCard}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.helpTitle}>Un souci avec une commande ?</Text>
-              <Text style={styles.helpSub}>Notre équipe vous répond rapidement.</Text>
+              <Text style={styles.helpTitle}>{t('orders:helpTitle')}</Text>
+              <Text style={styles.helpSub}>{t('orders:helpSub')}</Text>
             </View>
             <TouchableOpacity
               style={styles.helpBtn}
@@ -299,7 +284,7 @@ export default function OrdersScreen() {
               })}
               activeOpacity={0.85}
             >
-              <Text style={styles.helpBtnText}>Contacter le support</Text>
+              <Text style={styles.helpBtnText}>{t('orders:contactSupport')}</Text>
             </TouchableOpacity>
           </View>
         )}
