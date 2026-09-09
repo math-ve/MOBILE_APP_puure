@@ -7,8 +7,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
+import { formatDate } from '../../lib/i18n/format'
+import { i18n } from '../../lib/i18n'
 import ProgressRing from '../../components/ui/ProgressRing'
 import { useToast } from '../../hooks/useToast'
 
@@ -142,6 +145,7 @@ interface AddFilterModalProps {
 }
 
 function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalProps) {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const { showToast } = useToast()
   const [name, setName] = useState('')
@@ -177,12 +181,11 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
     })
   }
 
-  const formatInstallDate = (d: Date) =>
-    d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const formatInstallDate = (d: Date) => formatDate(d)
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Champ requis', 'Donnez un nom à votre filtre.')
+      Alert.alert(t('filters:nameRequiredTitle'), t('filters:nameRequiredBody'))
       return
     }
     setSaving(true)
@@ -215,10 +218,10 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
       if (timerErr) throw timerErr
 
       reset()
-      showToast('Filtre ajouté avec succès 💧', 'success')
+      showToast(t('filters:filterAdded'), 'success')
       onSaved()
     } catch {
-      showToast('Une erreur est survenue', 'error')
+      showToast(t('common:errorGeneric'), 'error')
     } finally {
       setSaving(false)
     }
@@ -236,47 +239,47 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
             ]}
           >
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Ajouter un filtre</Text>
+            <Text style={styles.modalTitle}>{t('filters:modalTitle')}</Text>
 
             {/* Nom */}
-            <Text style={styles.fieldLabel}>NOM DU FILTRE</Text>
+            <Text style={styles.fieldLabel}>{t('filters:fieldName')}</Text>
             <TextInput
               style={styles.fieldInput}
-              placeholder="Ex: Filtre cuisine"
+              placeholder={t('filters:fieldNamePlaceholder')}
               placeholderTextColor={theme.colors.textXLight}
               value={name}
               onChangeText={setName}
             />
 
             {/* Type */}
-            <Text style={styles.fieldLabel}>TYPE</Text>
+            <Text style={styles.fieldLabel}>{t('filters:fieldType')}</Text>
             <View style={styles.typeRow}>
-              {(['robinet', 'douche'] as const).map(t => (
+              {(['robinet', 'douche'] as const).map(opt => (
                 <TouchableOpacity
-                  key={t}
-                  style={[styles.typeBtn, type === t && styles.typeBtnActive]}
-                  onPress={() => setType(t)}
+                  key={opt}
+                  style={[styles.typeBtn, type === opt && styles.typeBtnActive]}
+                  onPress={() => setType(opt)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.typeBtnText, type === t && styles.typeBtnTextActive]}>
-                    {t === 'robinet' ? '🚿 Robinet' : '🚿 Douche'}
+                  <Text style={[styles.typeBtnText, type === opt && styles.typeBtnTextActive]}>
+                    {opt === 'robinet' ? t('filters:typeTap') : t('filters:typeShower')}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Emplacement */}
-            <Text style={styles.fieldLabel}>EMPLACEMENT</Text>
+            <Text style={styles.fieldLabel}>{t('filters:fieldLocation')}</Text>
             <TextInput
               style={styles.fieldInput}
-              placeholder="Ex: Cuisine, Salle de bain"
+              placeholder={t('filters:fieldLocationPlaceholder')}
               placeholderTextColor={theme.colors.textXLight}
               value={location}
               onChangeText={setLocation}
             />
 
             {/* Date d'installation */}
-            <Text style={styles.fieldLabel}>DATE D'INSTALLATION</Text>
+            <Text style={styles.fieldLabel}>{t('filters:fieldInstallDate')}</Text>
             {Platform.OS === 'ios' ? (
               <View style={styles.datePickerWrap}>
                 <DateTimePicker
@@ -286,7 +289,7 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
                   maximumDate={new Date()}
                   accentColor={theme.colors.blue}
                   onChange={(_, selected) => { if (selected) setInstallDate(selected) }}
-                  locale="fr-FR"
+                  locale={i18n.language}
                 />
               </View>
             ) : (
@@ -296,24 +299,24 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
             )}
 
             {/* Durée */}
-            <Text style={styles.fieldLabel}>DURÉE DE VIE</Text>
+            <Text style={styles.fieldLabel}>{t('filters:fieldLifespan')}</Text>
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperBtn}
                 onPress={() => setDuration(d => Math.max(DURATION_MIN, d - DURATION_STEP))}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel="Réduire la durée de vie de 15 jours"
+                accessibilityLabel={t('filters:decreaseLifespanA11y')}
               >
                 <Text style={styles.stepperBtnText}>−</Text>
               </TouchableOpacity>
-              <Text style={styles.stepperValue}>{duration} jours</Text>
+              <Text style={styles.stepperValue}>{t('filters:lifespanDays', { count: duration })}</Text>
               <TouchableOpacity
                 style={styles.stepperBtn}
                 onPress={() => setDuration(d => Math.min(DURATION_MAX, d + DURATION_STEP))}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel="Augmenter la durée de vie de 15 jours"
+                accessibilityLabel={t('filters:increaseLifespanA11y')}
               >
                 <Text style={styles.stepperBtnText}>+</Text>
               </TouchableOpacity>
@@ -327,12 +330,12 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
               activeOpacity={0.85}
             >
               <Text style={styles.btnLimeText}>
-                {saving ? 'Enregistrement...' : 'Enregistrer le filtre'}
+                {saving ? t('filters:saving') : t('filters:saveFilter')}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => { reset(); onClose() }} activeOpacity={0.7}>
-              <Text style={styles.modalCancel}>Annuler</Text>
+              <Text style={styles.modalCancel}>{t('common:cancel')}</Text>
             </TouchableOpacity>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -344,6 +347,7 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
 // ─── Écran ─────────────────────────────────────────────────
 
 export default function FiltersScreen() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const { showToast } = useToast()
   const [userId, setUserId] = useState<string | null>(null)
@@ -366,7 +370,7 @@ export default function FiltersScreen() {
 
       setFilters(filtersData ?? [])
       const timerMap: Record<string, any> = {}
-      for (const t of (timersData ?? [])) timerMap[t.filter_id] = t
+      for (const tm of (timersData ?? [])) timerMap[tm.filter_id] = tm
       setTimers(timerMap)
     } catch {
       // Réseau/backend indisponible : état vide affiché, pull-to-refresh pour réessayer.
@@ -392,8 +396,8 @@ export default function FiltersScreen() {
       total_paused_seconds: 0,
       is_active: true,
     })
-    if (error) { showToast('Une erreur est survenue', 'error'); return }
-    showToast('Timer démarré 💧', 'success')
+    if (error) { showToast(t('common:errorGeneric'), 'error'); return }
+    showToast(t('filters:timerStarted'), 'success')
     await load()
   }
 
@@ -401,12 +405,12 @@ export default function FiltersScreen() {
     const timer = timers[filter.id]
     if (!userId) return
     Alert.alert(
-      'Confirmer le remplacement',
-      'Le timer sera réinitialisé et un nouveau cycle commencera.',
+      t('filters:replaceTitle'),
+      t('filters:replaceBody'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common:cancel'), style: 'cancel' },
         {
-          text: 'Confirmer',
+          text: t('common:confirm'),
           onPress: async () => {
             try {
               if (timer) {
@@ -423,10 +427,10 @@ export default function FiltersScreen() {
                 total_paused_seconds: 0,
                 is_active: true,
               })
-              showToast('Nouvelle cartouche enregistrée 💧', 'success')
+              showToast(t('filters:newCartridgeSaved'), 'success')
               await load()
             } catch {
-              showToast('Une erreur est survenue', 'error')
+              showToast(t('common:errorGeneric'), 'error')
             }
           },
         },
@@ -450,17 +454,17 @@ export default function FiltersScreen() {
             total_paused_seconds: (timer.total_paused_seconds ?? 0) + addedSeconds,
           })
           .eq('id', timer.id)
-        showToast('Timer repris ▶', 'success')
+        showToast(t('filters:timerResumed'), 'success')
       } else {
         await supabase
           .from('cartridge_timers')
           .update({ paused_at: new Date().toISOString() })
           .eq('id', timer.id)
-        showToast('Timer en pause ⏸', 'success')
+        showToast(t('filters:timerPaused'), 'success')
       }
       await load()
     } catch {
-      showToast('Une erreur est survenue', 'error')
+      showToast(t('common:errorGeneric'), 'error')
     }
   }
 
@@ -468,12 +472,12 @@ export default function FiltersScreen() {
   const deleteFilter = (filter: any) => {
     const timer = timers[filter.id]
     Alert.alert(
-      'Supprimer ce filtre',
-      `« ${filter.product_name} » et son suivi de cartouche seront supprimés. Cette action est irréversible.`,
+      t('filters:deleteTitle'),
+      t('filters:deleteBody', { name: filter.product_name }),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common:cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('common:delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -481,10 +485,10 @@ export default function FiltersScreen() {
                 await supabase.from('cartridge_timers').update({ is_active: false }).eq('id', timer.id)
               }
               await supabase.from('filters').update({ is_active: false }).eq('id', filter.id)
-              showToast('Filtre supprimé', 'success')
+              showToast(t('filters:filterDeleted'), 'success')
               await load()
             } catch {
-              showToast('Une erreur est survenue', 'error')
+              showToast(t('common:errorGeneric'), 'error')
             }
           },
         },
@@ -498,18 +502,18 @@ export default function FiltersScreen() {
     const isPaused = !!timer?.paused_at
     Alert.alert(
       filter.product_name,
-      'Que souhaitez-vous faire ?',
+      t('filters:menuBody'),
       [
         {
-          text: isPaused ? '▶ Reprendre le suivi' : '⏸ Mettre en pause',
+          text: isPaused ? t('filters:menuResume') : t('filters:menuPause'),
           onPress: () => togglePause(filter),
         },
         {
-          text: '🗑 Supprimer ce filtre',
+          text: t('filters:menuDelete'),
           style: 'destructive',
           onPress: () => deleteFilter(filter),
         },
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common:cancel'), style: 'cancel' },
       ]
     )
   }
@@ -525,9 +529,9 @@ export default function FiltersScreen() {
       >
         {/* Header */}
         <View style={[styles.pageHeader, { paddingTop: insets.top + theme.spacing[5] }]}>
-          <Text style={styles.pageTitle}>Mes filtres</Text>
+          <Text style={styles.pageTitle}>{t('filters:pageTitle')}</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => setShowModal(true)} activeOpacity={0.85}>
-            <Text style={styles.addBtnText}>+ Ajouter</Text>
+            <Text style={styles.addBtnText}>{t('filters:add')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -540,16 +544,14 @@ export default function FiltersScreen() {
               <View style={styles.emptyCircle}>
                 <Text style={styles.emptyIcon}>💧</Text>
               </View>
-              <Text style={styles.emptyTitle}>Aucun filtre configuré</Text>
-              <Text style={styles.emptySub}>
-                Ajoutez votre premier filtre pour commencer{'\n'}à tracker votre cartouche
-              </Text>
+              <Text style={styles.emptyTitle}>{t('filters:emptyTitle')}</Text>
+              <Text style={styles.emptySub}>{t('filters:emptySub')}</Text>
               <TouchableOpacity
                 style={styles.btnBlueFull}
                 onPress={() => setShowModal(true)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.btnBlueFullText}>+ Ajouter mon premier filtre</Text>
+                <Text style={styles.btnBlueFullText}>{t('filters:addFirst')}</Text>
               </TouchableOpacity>
             </View>
           </CascadeIn>
@@ -585,7 +587,7 @@ export default function FiltersScreen() {
                       onPress={() => openCartridgeMenu(filter)}
                       activeOpacity={0.6}
                       accessibilityRole="button"
-                      accessibilityLabel={`Options du filtre ${filter.product_name}`}
+                      accessibilityLabel={t('filters:filterOptionsA11y', { name: filter.product_name })}
                     >
                       <Text style={styles.menuBtnText}>⋯</Text>
                     </TouchableOpacity>
@@ -595,10 +597,10 @@ export default function FiltersScreen() {
                     <>
                       {/* Grande jauge */}
                       <View style={styles.ringWrap}>
-                        <ProgressRing progress={progress} size={220} strokeWidth={14} label="utilisé" />
+                        <ProgressRing progress={progress} size={220} strokeWidth={14} label={t('filters:ringLabel')} />
                         {isPaused && (
                           <View style={styles.pausedBadge}>
-                            <Text style={styles.pausedBadgeText}>EN PAUSE</Text>
+                            <Text style={styles.pausedBadgeText}>{t('filters:paused').toUpperCase()}</Text>
                           </View>
                         )}
                       </View>
@@ -607,12 +609,12 @@ export default function FiltersScreen() {
                       <View style={styles.statsRow}>
                         <View style={styles.statCol}>
                           <Text style={styles.statValue}>{progress}%</Text>
-                          <Text style={styles.statLabel}>UTILISÉ</Text>
+                          <Text style={styles.statLabel}>{t('filters:statUsed').toUpperCase()}</Text>
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statCol}>
-                          <Text style={styles.statValue}>{daysRemaining}j</Text>
-                          <Text style={styles.statLabel}>RESTANTS</Text>
+                          <Text style={styles.statValue}>{t('filters:daysShort', { count: daysRemaining })}</Text>
+                          <Text style={styles.statLabel}>{t('filters:statRemaining').toUpperCase()}</Text>
                         </View>
                       </View>
 
@@ -620,18 +622,16 @@ export default function FiltersScreen() {
 
                       {/* Cartouche remplacée */}
                       <PressableScale onPress={() => replaceCartridge(filter)} style={styles.btnLime}>
-                        <Text style={styles.btnLimeText}>💧 Cartouche remplacée</Text>
+                        <Text style={styles.btnLimeText}>{t('filters:cartridgeReplaced')}</Text>
                       </PressableScale>
                     </>
                   ) : (
                     /* Timer non démarré */
                     <View style={styles.noTimerWrap}>
                       <Text style={styles.noTimerIcon}>⏱</Text>
-                      <Text style={styles.noTimerText}>
-                        Démarrez le timer au moment de l'installation
-                      </Text>
+                      <Text style={styles.noTimerText}>{t('filters:startTimerHint')}</Text>
                       <PulseButton onPress={() => startTimer(filter)} style={styles.btnBlueFull}>
-                        <Text style={styles.btnBlueFullText}>▶ Démarrer le timer</Text>
+                        <Text style={styles.btnBlueFullText}>{t('filters:startTimer')}</Text>
                       </PulseButton>
                     </View>
                   )}
