@@ -19,6 +19,21 @@
     "reconnectPrompt": "Please sign in again.",
     "dateAtTime": "{{date}} at {{time}}"
   },
+  "settings": {
+    "title": "Settings",
+    "openA11y": "Settings",
+    "language": "Language",
+    "languageAuto": "Automatic (phone language)",
+    "languageAutoHint": "The app follows your phone's language: {{language}}",
+    "fr": "Français",
+    "en": "English",
+    "de": "Deutsch",
+    "about": "About",
+    "version": "Version",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "signOut": "Sign out"
+  },
   "tabs": {
     "home": "Home",
     "subscriptions": "Subscriptions",

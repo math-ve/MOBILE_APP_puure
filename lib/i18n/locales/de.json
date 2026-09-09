@@ -19,6 +19,21 @@
     "reconnectPrompt": "Bitte melde dich erneut an.",
     "dateAtTime": "{{date}} um {{time}}"
   },
+  "settings": {
+    "title": "Einstellungen",
+    "openA11y": "Einstellungen",
+    "language": "Sprache",
+    "languageAuto": "Automatisch (Telefonsprache)",
+    "languageAutoHint": "Die App folgt der Sprache deines Telefons: {{language}}",
+    "fr": "Français",
+    "en": "English",
+    "de": "Deutsch",
+    "about": "Über",
+    "version": "Version",
+    "privacyPolicy": "Datenschutzerklärung",
+    "termsOfService": "Nutzungsbedingungen",
+    "signOut": "Abmelden"
+  },
   "tabs": {
     "home": "Start",
     "subscriptions": "Abonnements",

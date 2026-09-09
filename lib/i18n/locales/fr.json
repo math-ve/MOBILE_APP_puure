@@ -19,6 +19,21 @@
     "reconnectPrompt": "Veuillez vous reconnecter.",
     "dateAtTime": "{{date}} à {{time}}"
   },
+  "settings": {
+    "title": "Réglages",
+    "openA11y": "Réglages",
+    "language": "Langue",
+    "languageAuto": "Automatique (langue du téléphone)",
+    "languageAutoHint": "L'app suit la langue de votre téléphone : {{language}}",
+    "fr": "Français",
+    "en": "English",
+    "de": "Deutsch",
+    "about": "À propos",
+    "version": "Version",
+    "privacyPolicy": "Politique de confidentialité",
+    "termsOfService": "Conditions d'utilisation",
+    "signOut": "Se déconnecter"
+  },
   "tabs": {
     "home": "Accueil",
     "subscriptions": "Abonnements",

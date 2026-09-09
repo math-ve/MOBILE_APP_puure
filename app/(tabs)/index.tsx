@@ -164,6 +164,25 @@ function DropIcon({ size = 64, color = theme.colors.border }: { size?: number; c
   )
 }
 
+function GearIcon() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+        stroke={theme.colors.white}
+        strokeWidth={1.8}
+      />
+      <Path
+        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.62.77 1.03 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+        stroke={theme.colors.white}
+        strokeWidth={1.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  )
+}
+
 // ─── Écran ─────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -265,16 +284,27 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.dateText}>{formatToday()}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.bellCircle}
-          onPress={openNotifications}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={hasUnread ? t('home:notificationsUnreadA11y') : t('home:notificationsA11y')}
-        >
-          <BellIcon />
-          {hasUnread && <View style={styles.bellBadge} />}
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.bellCircle}
+            onPress={openNotifications}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={hasUnread ? t('home:notificationsUnreadA11y') : t('home:notificationsA11y')}
+          >
+            <BellIcon />
+            {hasUnread && <View style={styles.bellBadge} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.bellCircle}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings:openA11y')}
+          >
+            <GearIcon />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -455,6 +485,10 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.size.base - 1,
     color: 'rgba(255,255,255,0.5)',
     marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: theme.spacing[2],
   },
   bellCircle: {
     width: 40,
