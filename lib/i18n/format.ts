@@ -1,4 +1,4 @@
-import i18n from './index'
+import i18n, { DEFAULT_LANGUAGE } from './index'
 
 // Locale complète utilisée pour Intl (dates, nombres, devises).
 const LOCALE_MAP: Record<string, string> = {
@@ -8,7 +8,7 @@ const LOCALE_MAP: Record<string, string> = {
 }
 
 function currentLocale(): string {
-  return LOCALE_MAP[i18n.language] ?? LOCALE_MAP.fr
+  return LOCALE_MAP[i18n.language] ?? LOCALE_MAP[DEFAULT_LANGUAGE]
 }
 
 /** Date longue : 9 septembre 2026 / 9 September 2026 / 9. September 2026 */

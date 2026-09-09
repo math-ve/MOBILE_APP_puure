@@ -9,7 +9,9 @@ import fr from './locales/fr.json'
 
 export const SUPPORTED_LANGUAGES = ['fr', 'en', 'de'] as const
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
-export const DEFAULT_LANGUAGE: Language = 'fr'
+// Langue de repli quand celle de l'appareil n'est pas supportée
+// (ex. téléphone en polonais) et quand une clé manque dans une locale.
+export const DEFAULT_LANGUAGE: Language = 'en'
 
 // Clé AsyncStorage du choix manuel. Absente => on suit la langue de l'appareil.
 const STORAGE_KEY = 'user_language'
@@ -34,7 +36,7 @@ export function getDeviceLanguage(): Language {
  * Résout la langue initiale :
  * 1. choix manuel stocké
  * 2. langue de l'appareil (si supportée)
- * 3. français
+ * 3. anglais (DEFAULT_LANGUAGE)
  */
 async function resolveInitialLanguage(): Promise<Language> {
   try {
