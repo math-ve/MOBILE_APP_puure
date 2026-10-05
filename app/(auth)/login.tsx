@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  View, Text, TextInput, TouchableOpacity, Pressable, StyleSheet,
   Platform, Dimensions, ScrollView, KeyboardAvoidingView,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -23,7 +23,8 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets()
   const [email, setEmail] = useState('')
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
-  const [step, setStep] = useState<'email' | 'otp'>('email')
+  const [password, setPassword] = useState('')
+  const [step, setStep] = useState<'email' | 'otp' | 'password'>('email')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const otpRefs = useRef<any[]>([])
@@ -79,6 +80,29 @@ export default function LoginScreen() {
     finally { setLoading(false) }
   }
 
+  // Connexion par mot de passe : réservée au compte de démo utilisé par
+  // l'App Review d'Apple (pas d'accès à la boîte mail pour recevoir l'OTP).
+  // Accessible via un appui long sur le logo, invisible pour les clients.
+  const handlePasswordLogin = async () => {
+    if (!email.includes('@')) { setError(t('auth:emailInvalid')); return }
+    if (!password) { setError(t('auth:passwordInvalid')); return }
+    setLoading(true); setError('')
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
+      if (authError) { setError(t('auth:passwordInvalid')); return }
+      const seen = await AsyncStorage.getItem(NOTIF_INTRO_SEEN_KEY)
+      router.replace(seen ? '/(tabs)' : '/(auth)/notifications-intro')
+    } catch { setError(t('auth:verificationError')) }
+    finally { setLoading(false) }
+  }
+
+  const backToEmail = () => {
+    setStep('email'); setOtpValues(['', '', '', '', '', '']); setPassword(''); setError('')
+  }
+
   return (
     <View style={styles.root}>
       {/* VIDEO */}
@@ -124,9 +148,13 @@ export default function LoginScreen() {
             <View style={styles.handle} />
 
             {/* Logo */}
-            <View style={styles.logoRow}>
+            <Pressable
+              style={styles.logoRow}
+              onLongPress={() => { setStep('password'); setError('') }}
+              delayLongPress={1500}
+            >
               <Logo width={132} />
-            </View>
+            </Pressable>
 
             {step === 'email' ? (
               <>
@@ -161,6 +189,55 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 <Text style={styles.footer}>{t('auth:securedAccess')}</Text>
+              </>
+            ) : step === 'password' ? (
+              <>
+                <Text style={styles.title}>{t('auth:loginTitle')}</Text>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder={t('auth:emailPlaceholder')}
+                  placeholderTextColor="rgba(35,48,86,0.35)"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  keyboardAppearance="light"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="username"
+                />
+
+                <TextInput
+                  style={styles.input}
+                  placeholder={t('auth:passwordPlaceholder')}
+                  placeholderTextColor="rgba(35,48,86,0.35)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  keyboardAppearance="light"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="password"
+                  returnKeyType="go"
+                  onSubmitEditing={handlePasswordLogin}
+                />
+
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                <TouchableOpacity
+                  style={[styles.btnLime, loading && { opacity: 0.7 }]}
+                  onPress={handlePasswordLogin}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.btnLimeText}>
+                    {loading ? t('auth:verifying') : t('auth:signIn')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={backToEmail} style={{ marginTop: 12, alignItems: 'center' }}>
+                  <Text style={styles.backLink}>{t('auth:backToCode')}</Text>
+                </TouchableOpacity>
               </>
             ) : (
               <>
@@ -200,7 +277,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => { setStep('email'); setOtpValues(['', '', '', '', '', '']); setError('') }}
+                  onPress={backToEmail}
                   style={{ marginTop: 12, alignItems: 'center' }}
                 >
                   <Text style={styles.backLink}>{t('auth:changeEmail')}</Text>
