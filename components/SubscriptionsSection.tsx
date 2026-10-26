@@ -7,13 +7,14 @@ import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../lib/supabase'
-import { track } from '../lib/analytics'
+import { subscriptionApi } from '../lib/subscriptionApi'
+import { AlertBanner } from './ds/Flow'
+import PauseSheet from './subscription/PauseSheet'
 import theme from '../lib/theme'
 import { getSubscriptionStatus } from '../lib/statuses'
 import { formatDate as formatLocaleDate, formatCurrency, formatFrequency } from '../lib/i18n/format'
 import { useToast } from '../hooks/useToast'
 
-const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 const SITE_URL = 'https://puurefilters.com'
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -95,6 +96,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
   const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
+  const [pauseFor, setPauseFor] = useState<string | null>(null)
 
   const loadSubscriptions = async () => {
     try {
@@ -113,18 +115,13 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
   }
 
   const triggerSync = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    await fetch(`${SUPABASE_URL}/functions/v1/sync-subscriptions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ user_id: session.user.id }),
-    })
+    await subscriptionApi.sync()
   }
 
   useEffect(() => {
-    triggerSync().catch(() => {})
+    // Affiche le cache tout de suite, puis le recharge une fois synchronisé avec Appstle.
     loadSubscriptions().finally(() => setLoading(false))
+    triggerSync().then(loadSubscriptions).catch(() => {})
   }, [])
 
   // Rechargement déclenché par le parent (pull-to-refresh)
@@ -135,28 +132,13 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
     },
   }))
 
-  const callManage = async (contractId: string, action: 'pause' | 'resume' | 'cancel') => {
-    const key = `${contractId}_${action}`
+  const resume = async (contractId: string) => {
+    const key = `${contractId}_resume`
     setActionLoading(prev => ({ ...prev, [key]: true }))
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/manage-subscription`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ user_id: session.user.id, subscription_contract_id: contractId, action }),
-      })
-      const json = await res.json()
-      track('subscription_action', { action, success: !!json.success, screen_source: 'subscriptions-section' })
-      if (!json.success) throw new Error(json.error ?? 'Unknown error')
-      await triggerSync().catch(() => {})
+      await subscriptionApi.resume(contractId, 'subscriptions-section')
       await loadSubscriptions()
-      const messages: Record<string, string> = {
-        pause: t('subscription:actionPaused'),
-        resume: t('subscription:actionResumed'),
-        cancel: t('subscription:actionCancelled'),
-      }
-      showToast(messages[action] ?? t('subscription:actionSuccess'), 'success')
+      showToast(t('subscription:actionResumed'), 'success')
     } catch {
       showToast(t('common:errorGeneric'), 'error')
     } finally {
@@ -164,28 +146,27 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
     }
   }
 
-  const confirmCancel = (contractId: string) => {
-    Alert.alert(
-      t('subscription:cancelTitle'),
-      t('subscription:cancelBody'),
-      [
-        { text: t('common:back'), style: 'cancel' },
-        { text: t('subscription:cancelConfirm'), style: 'destructive', onPress: () => callManage(contractId, 'cancel') },
-      ]
-    )
-  }
-
+  // Pause : confirmation dans une feuille. Annulation : parcours avec motif.
   const openManageMenu = (contractId: string) => {
     Alert.alert(
       t('subscription:manageTitle'),
       t('subscription:manageBody'),
       [
-        { text: t('subscription:menuPause'), onPress: () => callManage(contractId, 'pause') },
-        { text: t('subscription:menuCancel'), style: 'destructive', onPress: () => confirmCancel(contractId) },
+        { text: t('subscription:menuPause'), onPress: () => setPauseFor(contractId) },
+        {
+          text: t('subscription:menuCancel'),
+          style: 'destructive',
+          onPress: () => router.push({ pathname: '/cancel-subscription', params: { contractId } }),
+        },
         { text: t('common:back'), style: 'cancel' },
       ]
     )
   }
+
+  const openDetail = (sub: any, open?: string) => router.push({
+    pathname: '/subscription-detail',
+    params: { contractId: sub.appstle_subscription_id, subData: JSON.stringify(sub), ...(open ? { open } : {}) },
+  })
 
   const activeSubs = subscriptions.filter(s => s.status === 'active')
   const historySubs = subscriptions.filter(s => s.status !== 'active')
@@ -233,12 +214,10 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
     </View>
   )
 
-  const renderActionButton = (
-    sub: any, action: 'pause' | 'resume' | 'cancel', label: string, color: string, bg: string, border: string,
-  ) => {
+  const renderResumeButton = (sub: any, label: string, color: string, bg: string, border: string) => {
     const cid = sub.appstle_subscription_id
-    const isLoading = !!actionLoading[`${cid}_${action}`]
-    const onPress = action === 'cancel' ? () => confirmCancel(cid) : () => callManage(cid, action)
+    const isLoading = !!actionLoading[`${cid}_resume`]
+    const onPress = () => resume(cid)
     return (
       <TouchableOpacity
         style={[styles.actionBtn, { backgroundColor: bg, borderColor: border }]}
@@ -281,6 +260,15 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
         const cid = sub.appstle_subscription_id
         return (
           <CascadeIn key={cid} index={index}>
+            {sub.payment_failed_at && (
+              <View style={{ marginBottom: theme.spacing[3] }}>
+                <AlertBanner
+                  title={t('care:payment.failedTitle')}
+                  body={t('care:payment.failedBody')}
+                  onPress={() => openDetail(sub, 'payment')}
+                />
+              </View>
+            )}
             <View style={styles.card}>
               {renderBanner(sub, false)}
               {renderInfoRows(sub)}
@@ -288,7 +276,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={styles.btnDetail}
-                  onPress={() => router.push({ pathname: '/subscription-detail', params: { contractId: cid, subData: JSON.stringify(sub) } })}
+                  onPress={() => openDetail(sub)}
                   activeOpacity={0.85}
                 >
                   <Text style={styles.btnDetailText}>{t('subscription:seeDetails')}</Text>
@@ -319,7 +307,10 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
                     <>
                       <View style={styles.divider} />
                       <View style={styles.actions}>
-                        {renderActionButton(sub, 'resume', t('subscription:resume'), theme.colors.success, 'rgba(30,187,110,0.08)', 'rgba(30,187,110,0.3)')}
+                        {renderResumeButton(sub, t('care:pause.resume'), theme.colors.success, 'rgba(30,187,110,0.08)', 'rgba(30,187,110,0.3)')}
+                        <TouchableOpacity style={styles.btnManage} onPress={() => openDetail(sub)} activeOpacity={0.7}>
+                          <Text style={styles.btnManageText}>{t('subscription:seeDetails')}</Text>
+                        </TouchableOpacity>
                       </View>
                     </>
                   )}
@@ -328,6 +319,20 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
             )
           })}
         </>
+      )}
+
+      {pauseFor && (
+        <PauseSheet
+          contractId={pauseFor}
+          source="subscriptions-section"
+          onClose={() => setPauseFor(null)}
+          onPaused={() => {
+            const contractId = pauseFor
+            setPauseFor(null)
+            loadSubscriptions()
+            router.push({ pathname: '/done', params: { kind: 'paused', contractId } })
+          }}
+        />
       )}
 
       {/* Lien gérer sur le site */}

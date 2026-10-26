@@ -18,6 +18,14 @@ import {
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+// Offre de fidélisation « trop cher » : inactive tant que le code Shopify
+// n'est pas défini dans les secrets (le code ne transite jamais par l'app).
+function retentionOffer(): { code: string; percent: number } | null {
+  const code = Deno.env.get("RETENTION_DISCOUNT_CODE")?.trim();
+  const percent = Number(Deno.env.get("RETENTION_DISCOUNT_PERCENT") ?? "20");
+  return code && percent > 0 && percent < 100 ? { code, percent } : null;
+}
+
 // Un e-mail de changement de carte au plus toutes les 24 h (recommandation Appstle).
 const PAYMENT_LINK_COOLDOWN_MS = 24 * 3600 * 1000;
 
@@ -101,6 +109,16 @@ Deno.serve(async (req) => {
         return await done(user.id, await appstle(
           `/subscription-contracts-update-status?contractId=${contractId}&status=${status}`, { method: "PUT" }));
       }
+      case "retention-discount": {
+        const offer = retentionOffer();
+        if (!offer) return json({ error: "Offre indisponible" }, 404);
+        const res = await appstle(
+          `/subscription-contracts-apply-discount?contractId=${contractId}&discountCode=${encodeURIComponent(offer.code)}`,
+          { method: "PUT" });
+        if (!res.ok) return appstleError(res);
+        await resync(user.id);
+        return json({ success: true, percent: offer.percent });
+      }
       case "cancel": return await cancel(user.id, contractId, body);
       case "payment-link": return await paymentLink(contractId);
       default: return json({ error: `Action inconnue : ${action}` }, 400);
@@ -161,6 +179,7 @@ async function detail(userId: string, contractId: string) {
     shippingAddress,
     paymentMethod,
     paymentFailedAt,
+    retentionOffer: retentionOffer() ? { percent: retentionOffer()!.percent } : null,
   };
 }
 

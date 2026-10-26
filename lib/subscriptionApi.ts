@@ -22,6 +22,8 @@ export type SubscriptionDetail = {
     cardHolderName: string | null
   } | null
   paymentFailedAt: string | null
+  /** Offre « trop cher » du parcours d'annulation ; null tant qu'elle n'est pas activée côté serveur. */
+  retentionOffer: { percent: number } | null
 }
 
 export class SubscriptionApiError extends Error {}
@@ -70,6 +72,8 @@ export const subscriptionApi = {
 
   pause: (contractId: string, screen?: string) => mutate('pause', contractId, {}, screen),
   resume: (contractId: string, screen?: string) => mutate('resume', contractId, {}, screen),
+  applyRetentionDiscount: (contractId: string) =>
+    mutate<{ success: boolean; percent: number }>('retention-discount', contractId, {}, 'cancel-flow'),
   cancel: (contractId: string, reason: CancelReason, comment?: string) =>
     mutate<{ success: boolean; status: string }>('cancel', contractId, { reason, comment }),
 

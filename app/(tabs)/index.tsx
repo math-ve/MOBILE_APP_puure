@@ -16,6 +16,8 @@ import { formatDate, formatDateShort, formatTime } from '../../lib/i18n/format'
 import ProgressRing from '../../components/ui/ProgressRing'
 import Logo from '../../components/ui/Logo'
 import SystemsProgress from '../../components/ui/SystemsProgress'
+import CartridgeAdvice from '../../components/home/CartridgeAdvice'
+import { AlertBanner } from '../../components/ds/Flow'
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -197,6 +199,8 @@ export default function HomeScreen() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [hasUnread, setHasUnread] = useState(false)
   const [notifSheetOpen, setNotifSheetOpen] = useState(false)
+  // Abonnements actifs / en pause : bandeau « paiement refusé » et texte du conseil cartouche.
+  const [liveSubs, setLiveSubs] = useState<any[]>([])
 
   useEffect(() => { loadData() }, [])
 
@@ -205,13 +209,15 @@ export default function HomeScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/(auth)/login'); return }
       setUserEmail(user.email ?? null)
-      const [{ data: prof }, { data: tim }, { data: notifs }] = await Promise.all([
+      const [{ data: prof }, { data: tim }, { data: notifs }, { data: subs }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('cartridge_timers').select('*, filters(*)').eq('user_id', user.id).eq('is_active', true),
         supabase.from('notification_logs').select('*').eq('user_id', user.id).order('sent_at', { ascending: false }).limit(20),
+        supabase.from('subscriptions_cache').select('*').eq('user_id', user.id).in('status', ['active', 'paused']),
       ])
       setProfile(prof)
       setTimers(tim ?? [])
+      setLiveSubs(subs ?? [])
 
       const notifList = notifs ?? []
       setNotifications(notifList)
@@ -261,6 +267,8 @@ export default function HomeScreen() {
     : null
 
   const waterIsPure = timers.length > 0 && timers.every(t => getProgress(t) < 80)
+  const failedSub = liveSubs.find(s => s.payment_failed_at)
+  const soonestDaysLeft = timers.length > 0 ? Math.min(...timers.map(getDaysRemaining)) : null
   // Types de systèmes possédés (dérivés des filtres actifs) pour le bloc gamifié
   const ownedSystemTypes = Array.from(
     new Set(timers.map(t => t.filters?.filter_type).filter(Boolean)),
@@ -325,6 +333,18 @@ export default function HomeScreen() {
         <>
           {/* ── SECTION 2 : HERO TIMER CARTOUCHE ── */}
           <FadeIn index={0} style={styles.heroWrap}>
+            {failedSub && (
+              <View style={{ marginBottom: theme.spacing[3] }}>
+                <AlertBanner
+                  title={t('care:payment.failedTitle')}
+                  body={t('care:payment.failedBody')}
+                  onPress={() => router.push({
+                    pathname: '/subscription-detail',
+                    params: { contractId: failedSub.appstle_subscription_id, subData: JSON.stringify(failedSub), open: 'payment' },
+                  })}
+                />
+              </View>
+            )}
             <View style={styles.heroCard}>
               {timers.length === 0 ? (
                 <View style={styles.emptyState}>
@@ -387,6 +407,17 @@ export default function HomeScreen() {
               )}
             </View>
           </FadeIn>
+
+          {/* ── Conseil cartouche + « Mon filtre ne va pas » ── */}
+          {timers.length > 0 && (
+            <FadeIn index={1} style={styles.section}>
+              <CartridgeAdvice
+                lifespansDays={timers.map(t => t.expected_duration_days).filter(Boolean)}
+                soonestDaysLeft={soonestDaysLeft}
+                hasActiveSubscription={liveSubs.some(s => s.status === 'active')}
+              />
+            </FadeIn>
+          )}
 
           {/* ── SECTION 3 : SYSTÈMES PUURE (gamifié) ── */}
           <FadeIn index={1} style={styles.section}>

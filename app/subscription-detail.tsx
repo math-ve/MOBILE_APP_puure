@@ -4,21 +4,23 @@ import {
   Image, TextInput, Alert, Modal, KeyboardAvoidingView, Platform,
   Animated, Easing,
 } from 'react-native'
-import { useLocalSearchParams, router } from 'expo-router'
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker'
 import Svg, { Path } from 'react-native-svg'
 import { useTranslation } from 'react-i18next'
-import { supabase } from '../lib/supabase'
-import { track } from '../lib/analytics'
+import { subscriptionApi } from '../lib/subscriptionApi'
+import { AlertBanner } from '../components/ds/Flow'
+import RescheduleSheet, { RescheduleOutcome } from '../components/subscription/RescheduleSheet'
+import PaymentSheet from '../components/subscription/PaymentSheet'
+import PauseSheet from '../components/subscription/PauseSheet'
+import Sheet from '../components/ds/Sheet'
+import PillButton from '../components/ds/PillButton'
 import theme from '../lib/theme'
 import i18n from '../lib/i18n'
 import { formatDate as fmtDate, formatDateShort as fmtDateShort, formatCurrency, formatFrequency } from '../lib/i18n/format'
 import { getSubscriptionStatus } from '../lib/statuses'
 import { useToast } from '../hooks/useToast'
-
-const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 
 type Tab = 'details' | 'upcoming' | 'past'
 
@@ -56,8 +58,6 @@ const getPastOrderStatus = (order: any): { label: string; color: string; bg: str
   if (financial === 'REFUNDED' || financial === 'PARTIALLY_REFUNDED') return { label: label('refunded'), ...orange }
   return { label: label('confirmed'), ...blue }
 }
-
-const toISODate = (d: Date) => d.toISOString().split('T')[0]
 
 const CARD_BRANDS: Record<string, { label: string; bg: string }> = {
   visa: { label: 'VISA', bg: '#1a1f71' },
@@ -204,16 +204,7 @@ function FrequencySheet({ contractId, currentValue, onClose, onSaved }: {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/subscription-action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ action: 'update-frequency', contractId, billingIntervalCount: selected }),
-      })
-      const json = await res.json()
-      track('subscription_action', { action: 'update-frequency', success: !!json.success, screen_source: 'subscription-detail' })
-      if (!json.success) throw new Error(json.error ?? 'Erreur')
+      await subscriptionApi.updateFrequency(contractId, selected)
       showToast(t('subscription:freqUpdated'), 'success')
       onSaved()
     } catch (e: any) {
@@ -320,8 +311,6 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
     }
     setSaving(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { Alert.alert(t('common:sessionExpired'), t('common:reconnectPrompt')); return }
       const address = {
         firstName: fields.firstName,
         lastName: fields.lastName,
@@ -336,20 +325,8 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
         phone: fields.phone || null,
         company: initial?.company ?? null,
       }
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/subscription-action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ action: 'update-address', contractId, address }),
-      })
-      const json = await res.json()
-      track('subscription_action', { action: 'update-address', success: !!json.success, screen_source: 'subscription-detail' })
-      if (!json.success) {
-        let errMsg = json.error ?? `HTTP ${res.status}`
-        if (json.raw) {
-          try { errMsg = JSON.parse(json.raw).message?.replace('UserGeneratedError:', '').trim() ?? errMsg } catch { /* keep */ }
-        }
-        throw new Error(errMsg)
-      }
+      // Le serveur renvoie déjà le message lisible d'Appstle (adresse refusée…).
+      await subscriptionApi.updateAddress(contractId, address)
       onSaved(address)
     } catch (e: any) {
       Alert.alert(t('common:errorGeneric'), e?.message ?? t('subscription:updateError'))
@@ -423,102 +400,6 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
         {saving
           ? <ActivityIndicator color={theme.colors.navy} size="small" />
           : <Text style={s.btnLimeText}>{t('subscription:save')}</Text>
-        }
-      </TouchableOpacity>
-    </BottomSheet>
-  )
-}
-
-// ─── Modal reprogrammation ─────────────────────────────────
-
-function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
-  contractId: string; attemptId: string; onClose: () => void; onSaved: () => void
-}) {
-  const { t } = useTranslation()
-  const { showToast } = useToast()
-  const [date, setDate] = useState(new Date(Date.now() + 7 * 86400000))
-  const [rescheduleAll, setRescheduleAll] = useState(false)
-  const [saving, setSaving] = useState(false)
-
-  const minDate = new Date(Date.now() + 86400000)
-  const maxDate = new Date(Date.now() + 365 * 86400000)
-
-  const openAndroidPicker = () => {
-    DateTimePickerAndroid.open({
-      value: date,
-      mode: 'date',
-      minimumDate: minDate,
-      maximumDate: maxDate,
-      onChange: (_, selected) => { if (selected) setDate(selected) },
-    })
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/subscription-action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({
-          action: 'reschedule', contractId, id: attemptId,
-          newBillingDate: toISODate(date), rescheduleAllUpcoming: rescheduleAll,
-        }),
-      })
-      const json = await res.json()
-      track('subscription_action', { action: 'reschedule', success: !!json.success, screen_source: 'subscription-detail' })
-      if (!json.success) throw new Error(json.error ?? 'Erreur')
-      showToast(t('subscription:orderRescheduled'), 'success')
-      onSaved()
-    } catch (e: any) {
-      showToast(e.message ?? t('common:errorGeneric'), 'error')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <BottomSheet onClose={onClose}>
-      <Text style={s.sheetTitle}>{t('subscription:rescheduleSheetTitle')}</Text>
-
-      {Platform.OS === 'ios' ? (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="inline"
-          minimumDate={minDate}
-          maximumDate={maxDate}
-          accentColor={theme.colors.blue}
-          onChange={(_, selected) => { if (selected) setDate(selected) }}
-          locale={i18n.language}
-        />
-      ) : (
-        <TouchableOpacity style={s.fieldInputSelect} onPress={openAndroidPicker} activeOpacity={0.7}>
-          <Text style={s.selectValueText}>{formatDate(date.toISOString())}</Text>
-        </TouchableOpacity>
-      )}
-
-      <TouchableOpacity
-        style={s.checkboxRow}
-        onPress={() => setRescheduleAll(!rescheduleAll)}
-        activeOpacity={0.7}
-      >
-        <View style={[s.checkbox, rescheduleAll && s.checkboxChecked]}>
-          {rescheduleAll && <CheckIcon color={theme.colors.white} size={12} />}
-        </View>
-        <Text style={s.checkboxLabel}>{t('subscription:rescheduleAll')}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[s.btnLime, saving && { opacity: 0.7 }]}
-        onPress={handleSave}
-        disabled={saving}
-        activeOpacity={0.85}
-      >
-        {saving
-          ? <ActivityIndicator color={theme.colors.navy} size="small" />
-          : <Text style={s.btnLimeText}>{t('subscription:confirm')}</Text>
         }
       </TouchableOpacity>
     </BottomSheet>
@@ -612,27 +493,36 @@ function PastOrderSheet({ order, currency, shippingAddress, onClose }: {
 
 export default function SubscriptionDetailScreen() {
   const { t } = useTranslation()
-  const { contractId, subData } = useLocalSearchParams<{ contractId: string; subData: string }>()
+  // subData : abonnement passé par la liste (affichage immédiat). Absent quand
+  // l'écran est ouvert par une notification : on charge tout depuis le serveur.
+  // open : feuille à ouvrir à l'arrivée (reschedule | payment | address).
+  const { contractId, subData, open } = useLocalSearchParams<{ contractId: string; subData?: string; open?: string }>()
   const { showToast } = useToast()
   const insets = useSafeAreaInsets()
 
-  const sub = useMemo(() => {
+  const [sub, setSub] = useState<any>(() => {
     try { return JSON.parse(subData ?? '{}') } catch { return {} }
-  }, [subData])
+  })
 
   const [activeTab, setActiveTab] = useState<Tab>('details')
   const [upcomingOrders, setUpcomingOrders] = useState<any[]>([])
   const [pastOrders, setPastOrders] = useState<any[]>([])
   const [shippingAddress, setShippingAddress] = useState<any>(null)
   const [paymentMethod, setPaymentMethod] = useState<any>(null)
+  const [paymentFailedAt, setPaymentFailedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [promoCode, setPromoCode] = useState('')
   const [freqSheet, setFreqSheet] = useState(false)
   const [addressSheet, setAddressSheet] = useState(false)
-  const [rescheduleSheet, setRescheduleSheet] = useState<string | null>(null)
+  const [rescheduleSheet, setRescheduleSheet] = useState(false)
+  const [paymentSheet, setPaymentSheet] = useState(false)
+  const [pauseSheet, setPauseSheet] = useState(false)
+  const [skipTarget, setSkipTarget] = useState<any>(null)
   const [pastOrderSheet, setPastOrderSheet] = useState<any>(null)
   const contentFade = useRef(new Animated.Value(1)).current
+  const openedFromParam = useRef(false)
 
   const contractLines = useMemo<any[]>(() => {
     const raw = sub.contract_details_json ?? sub.contractDetailsJSON
@@ -645,31 +535,33 @@ export default function SubscriptionDetailScreen() {
   const firstLine = contractLines[0] ?? {}
 
   const loadOrders = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('shopify_customer_id')
-      .eq('id', session.user.id)
-      .single()
-    const rawCid = profile?.shopify_customer_id ?? ''
-    const customerId = rawCid.includes('/') ? rawCid.split('/').pop() : rawCid || null
-
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/get-subscription-detail`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ contractId, customerId, userId: session.user.id }),
-    })
-    const json = await res.json()
-    setUpcomingOrders(json.upcomingOrders ?? [])
-    setPastOrders(json.pastOrders ?? [])
-    setShippingAddress(json.shippingAddress ?? null)
-    setPaymentMethod(json.paymentMethod ?? null)
+    try {
+      const d = await subscriptionApi.detail(contractId)
+      if (d.subscription) setSub((prev: any) => ({ ...prev, ...d.subscription }))
+      setUpcomingOrders(d.upcomingOrders ?? [])
+      setPastOrders(d.pastOrders ?? [])
+      setShippingAddress(d.shippingAddress ?? null)
+      setPaymentMethod(d.paymentMethod ?? null)
+      setPaymentFailedAt(d.paymentFailedAt ?? null)
+      setLoadError(false)
+    } catch {
+      setLoadError(true)
+    }
   }, [contractId])
 
-  useEffect(() => {
+  // Rechargé à chaque retour sur l'écran (après une pause, un décalage…).
+  useFocusEffect(useCallback(() => {
     loadOrders().finally(() => setLoading(false))
-  }, [loadOrders])
+  }, [loadOrders]))
+
+  // Feuille demandée par le lien d'arrivée (notification J-3, parcours d'annulation).
+  useEffect(() => {
+    if (loading || openedFromParam.current || !open) return
+    openedFromParam.current = true
+    if (open === 'reschedule') setRescheduleSheet(true)
+    else if (open === 'payment') setPaymentSheet(true)
+    else if (open === 'address') setAddressSheet(true)
+  }, [loading, open])
 
   const switchTab = (tab: Tab) => {
     if (tab === activeTab) return
@@ -679,65 +571,40 @@ export default function SubscriptionDetailScreen() {
     })
   }
 
-  const callAction = async (action: string, extra?: Record<string, unknown>, loadingKey?: string) => {
-    const key = loadingKey ?? action
+  const withLoading = async (key: string, fn: () => Promise<void>) => {
     setActionLoading(prev => ({ ...prev, [key]: true }))
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return false
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/subscription-action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ action, contractId, ...extra }),
-      })
-      const json = await res.json()
-      track('subscription_action', { action: action, success: !!json.success, screen_source: 'subscription-detail' })
-      if (!json.success) throw new Error(json.error ?? 'Unknown error')
-      return true
+      await fn()
     } catch (e: any) {
-      showToast(e.message ?? t('common:errorGeneric'), 'error')
-      return false
+      showToast(e?.message && e.message !== 'session' ? e.message : t('care:errors.generic'), 'error')
     } finally {
       setActionLoading(prev => ({ ...prev, [key]: false }))
     }
   }
 
-  const callManage = async (action: 'pause' | 'resume' | 'cancel') => {
-    setActionLoading(prev => ({ ...prev, [action]: true }))
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/manage-subscription`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ user_id: session.user.id, subscription_contract_id: contractId, action }),
-      })
-      const json = await res.json()
-      track('subscription_action', { action: action, success: !!json.success, screen_source: 'subscription-detail' })
-      if (!json.success) throw new Error(json.error ?? 'Erreur')
-      const msgs = {
-        pause: t('subscription:actionPaused'),
-        resume: t('subscription:actionResumed'),
-        cancel: t('subscription:actionCancelled'),
-      }
-      showToast(msgs[action], 'success')
-    } catch (e: any) {
-      showToast(e.message ?? t('common:errorGeneric'), 'error')
-    } finally {
-      setActionLoading(prev => ({ ...prev, [action]: false }))
-    }
+  const resume = () => withLoading('resume', async () => {
+    await subscriptionApi.resume(contractId)
+    showToast(t('care:pause.resumed'), 'success')
+    await loadOrders()
+  })
+
+  const onRescheduled = (o: RescheduleOutcome) => {
+    setRescheduleSheet(false)
+    const msg = o.kind === 'now'
+      ? t('care:reschedule.doneNow')
+      : o.kind === 'moved'
+        ? t('care:reschedule.doneMoved', { date: formatDate(o.date) })
+        : t('care:reschedule.doneSkipped')
+    showToast(msg, 'success')
+    loadOrders()
   }
 
-  const confirmCancel = () => {
-    Alert.alert(
-      t('subscription:cancelTitle'),
-      t('subscription:cancelBody'),
-      [
-        { text: t('common:back'), style: 'cancel' },
-        { text: t('subscription:cancelConfirm'), style: 'destructive', onPress: () => callManage('cancel') },
-      ]
-    )
-  }
+  const skipOrder = (order: any) => withLoading(`skip_${order.id}`, async () => {
+    await subscriptionApi.skip(contractId, String(order.id))
+    setSkipTarget(null)
+    showToast(t('care:reschedule.doneSkipped'), 'success')
+    await loadOrders()
+  })
 
   const isActive = sub.status === 'active'
   const isPaused = sub.status === 'paused'
@@ -761,6 +628,16 @@ export default function SubscriptionDetailScreen() {
 
   const renderDetails = () => (
     <>
+      {paymentFailedAt && (
+        <View style={{ marginBottom: theme.spacing[3] }}>
+          <AlertBanner
+            title={t('care:payment.failedTitle')}
+            body={t('care:payment.failedBody')}
+            onPress={() => setPaymentSheet(true)}
+          />
+        </View>
+      )}
+
       {/* Card produit hero */}
       <CascadeIn index={0}>
         <View style={[s.card, { padding: 0, overflow: 'hidden' }]}>
@@ -805,39 +682,17 @@ export default function SubscriptionDetailScreen() {
       {/* Prochaine commande */}
       <CascadeIn index={1}>
         <View style={s.card}>
-          <Text style={s.sectionCaps}>{t('subscription:nextOrder').toUpperCase()}</Text>
-          <Text style={s.nextDate}>{formatDate(sub.next_billing_date)}</Text>
-          {upcomingOrders.length > 0 && (
-            <View style={s.actionRow}>
-              <TouchableOpacity
-                style={[s.btnBlueSolid, { flex: 1 }]}
-                onPress={async () => {
-                  const ok = await callAction('order-now', { id: upcomingOrders[0].id }, 'order-now')
-                  if (ok) { showToast(t('subscription:orderTriggered'), 'success'); loadOrders() }
-                }}
-                disabled={!!actionLoading['order-now']}
-                activeOpacity={0.85}
-              >
-                {actionLoading['order-now']
-                  ? <ActivityIndicator color={theme.colors.white} size="small" />
-                  : <Text style={s.btnBlueSolidText}>{t('subscription:orderNow')}</Text>
-                }
+          <View style={s.cardHeaderRow}>
+            <Text style={s.sectionCaps}>{t('care:nextOrder.label').toUpperCase()}</Text>
+            {isActive && upcomingOrders.length > 0 && (
+              <TouchableOpacity style={s.btnOutlineBlueSmall} onPress={() => setRescheduleSheet(true)} activeOpacity={0.7}>
+                <Text style={s.btnOutlineBlueSmallText}>{t('care:nextOrder.move')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.btnGray, { flex: 1 }]}
-                onPress={async () => {
-                  const ok = await callAction('skip', { id: upcomingOrders[0].id }, 'skip-first')
-                  if (ok) { showToast(t('subscription:orderSkipped'), 'success'); loadOrders() }
-                }}
-                disabled={!!actionLoading['skip-first']}
-                activeOpacity={0.85}
-              >
-                {actionLoading['skip-first']
-                  ? <ActivityIndicator color={theme.colors.textMid} size="small" />
-                  : <Text style={s.btnGrayText}>{t('subscription:skip')}</Text>
-                }
-              </TouchableOpacity>
-            </View>
+            )}
+          </View>
+          <Text style={s.nextDate}>{formatDate(upcomingOrders[0]?.billingDate ?? sub.next_billing_date)}</Text>
+          {isActive && (
+            <Text style={s.paymentMeta}>{t('care:nextOrder.chargedOn', { price: formatPrice(subtotal, currency) })}</Text>
           )}
         </View>
       </CascadeIn>
@@ -889,7 +744,14 @@ export default function SubscriptionDetailScreen() {
       {/* Paiement */}
       <CascadeIn index={4}>
         <View style={s.card}>
-          <Text style={s.sectionCaps}>{t('subscription:payment').toUpperCase()}</Text>
+          <View style={s.cardHeaderRow}>
+            <Text style={s.sectionCaps}>{t('subscription:payment').toUpperCase()}</Text>
+            {sub.status !== 'cancelled' && (
+              <TouchableOpacity style={s.btnOutlineBlueSmall} onPress={() => setPaymentSheet(true)} activeOpacity={0.7}>
+                <Text style={s.btnOutlineBlueSmallText}>{t('subscription:modifyShort')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {paymentMethod ? (
             <>
               <View style={s.paymentRow}>
@@ -933,10 +795,11 @@ export default function SubscriptionDetailScreen() {
             />
             <TouchableOpacity
               style={[s.promoBtn, (!promoCode.trim() || !!actionLoading['apply-discount']) && { opacity: 0.5 }]}
-              onPress={async () => {
-                const ok = await callAction('apply-discount', { discountCode: promoCode.trim() }, 'apply-discount')
-                if (ok) { showToast(t('subscription:promoApplied'), 'success'); setPromoCode('') }
-              }}
+              onPress={() => withLoading('apply-discount', async () => {
+                await subscriptionApi.applyDiscount(contractId, promoCode.trim())
+                showToast(t('subscription:promoApplied'), 'success')
+                setPromoCode('')
+              })}
               disabled={!promoCode.trim() || !!actionLoading['apply-discount']}
               activeOpacity={0.85}
             >
@@ -957,20 +820,16 @@ export default function SubscriptionDetailScreen() {
           {isActive && (
             <TouchableOpacity
               style={[s.manageBtn, s.manageBtnOrange]}
-              onPress={() => callManage('pause')}
-              disabled={!!actionLoading['pause']}
+              onPress={() => setPauseSheet(true)}
               activeOpacity={0.85}
             >
-              {actionLoading['pause']
-                ? <ActivityIndicator color={theme.colors.warning} size="small" />
-                : <Text style={[s.manageBtnText, { color: theme.colors.warning }]}>{t('subscription:pause')}</Text>
-              }
+              <Text style={[s.manageBtnText, { color: theme.colors.warning }]}>{t('subscription:pause')}</Text>
             </TouchableOpacity>
           )}
           {isPaused && (
             <TouchableOpacity
               style={[s.manageBtn, s.manageBtnGreen]}
-              onPress={() => callManage('resume')}
+              onPress={resume}
               disabled={!!actionLoading['resume']}
               activeOpacity={0.85}
             >
@@ -980,17 +839,15 @@ export default function SubscriptionDetailScreen() {
               }
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            style={[s.manageBtn, s.manageBtnRed]}
-            onPress={confirmCancel}
-            disabled={!!actionLoading['cancel']}
-            activeOpacity={0.85}
-          >
-            {actionLoading['cancel']
-              ? <ActivityIndicator color={theme.colors.error} size="small" />
-              : <Text style={[s.manageBtnText, { color: theme.colors.error }]}>{t('subscription:cancel')}</Text>
-            }
-          </TouchableOpacity>
+          {sub.status !== 'cancelled' && (
+            <TouchableOpacity
+              style={[s.manageBtn, s.manageBtnRed]}
+              onPress={() => router.push({ pathname: '/cancel-subscription', params: { contractId } })}
+              activeOpacity={0.85}
+            >
+              <Text style={[s.manageBtnText, { color: theme.colors.error }]}>{t('subscription:cancel')}</Text>
+            </TouchableOpacity>
+          )}
           </View>
         </View>
       </CascadeIn>
@@ -1051,11 +908,8 @@ export default function SubscriptionDetailScreen() {
               <View style={s.actionRow}>
                 <TouchableOpacity
                   style={[s.btnGraySm, { flex: 1 }]}
-                  onPress={async () => {
-                    const ok = await callAction('skip', { id: order.id }, skipKey)
-                    if (ok) { showToast(t('subscription:orderSkipped'), 'success'); loadOrders() }
-                  }}
-                  disabled={!!actionLoading[skipKey]}
+                  onPress={() => setSkipTarget(order)}
+                  disabled={!!actionLoading[skipKey] || !isActive}
                   activeOpacity={0.85}
                 >
                   {actionLoading[skipKey]
@@ -1063,10 +917,10 @@ export default function SubscriptionDetailScreen() {
                     : <Text style={s.btnGraySmText}>{t('subscription:skip')}</Text>
                   }
                 </TouchableOpacity>
-                {index === 0 && (
+                {index === 0 && isActive && (
                   <TouchableOpacity
                     style={[s.btnBlueTint, { flex: 1 }]}
-                    onPress={() => setRescheduleSheet(order.id)}
+                    onPress={() => setRescheduleSheet(true)}
                     activeOpacity={0.85}
                   >
                     <Text style={s.btnBlueTintText}>{t('subscription:reschedule')}</Text>
@@ -1247,9 +1101,43 @@ export default function SubscriptionDetailScreen() {
       {rescheduleSheet && (
         <RescheduleSheet
           contractId={contractId}
-          attemptId={rescheduleSheet}
-          onClose={() => setRescheduleSheet(null)}
-          onSaved={() => { setRescheduleSheet(null); loadOrders() }}
+          upcoming={upcomingOrders}
+          price={formatPrice(subtotal, currency)}
+          onClose={() => setRescheduleSheet(false)}
+          onDone={onRescheduled}
+        />
+      )}
+      {paymentSheet && (
+        <PaymentSheet
+          contractId={contractId}
+          paymentMethod={paymentMethod}
+          onClose={() => setPaymentSheet(false)}
+          onSent={({ email, alreadySent }) => {
+            setPaymentSheet(false)
+            router.push({ pathname: '/done', params: { kind: alreadySent ? 'linkAlready' : 'link', email } })
+          }}
+        />
+      )}
+      {pauseSheet && (
+        <PauseSheet
+          contractId={contractId}
+          source="subscription-detail"
+          onClose={() => setPauseSheet(false)}
+          onPaused={() => {
+            setPauseSheet(false)
+            router.push({ pathname: '/done', params: { kind: 'paused', contractId } })
+          }}
+        />
+      )}
+      {skipTarget && (
+        <Sheet
+          title={t('care:reschedule.skipTitle')}
+          subtitle={t('care:reschedule.skipBody', { date: formatDate(skipTarget.billingDate) })}
+          onClose={() => setSkipTarget(null)}
+          footer={<>
+            <PillButton label={t('care:reschedule.skipCta')} loading={!!actionLoading[`skip_${skipTarget.id}`]} onPress={() => skipOrder(skipTarget)} />
+            <PillButton variant="quiet" label={t('common:back')} onPress={() => setSkipTarget(null)} />
+          </>}
         />
       )}
       {pastOrderSheet && (

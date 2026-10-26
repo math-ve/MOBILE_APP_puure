@@ -13,6 +13,7 @@ import {
   InstrumentSans_700Bold,
 } from '@expo-google-fonts/instrument-sans'
 import { supabase } from '../lib/supabase'
+import { subscriptionApi } from '../lib/subscriptionApi'
 import { ToastProvider } from '../hooks/useToast'
 import { initI18n, hasManualLanguage, getDeviceLanguage, i18n } from '../lib/i18n'
 import * as analytics from '../lib/analytics'
@@ -105,7 +106,8 @@ async function triggerSyncs(userId: string, accessToken: string) {
 
   await Promise.allSettled([
     fetch(`${SUPABASE_URL}/functions/v1/sync-orders`, { method: 'POST', headers, body }),
-    fetch(`${SUPABASE_URL}/functions/v1/sync-subscriptions`, { method: 'POST', headers, body }),
+    // Abonnements : fonction sécurisée (client identifié par son jeton) + détection des paiements refusés.
+    subscriptionApi.sync(),
   ])
 }
 
@@ -204,6 +206,11 @@ export default function RootLayout() {
         <Stack.Screen name="subscription-detail" />
         <Stack.Screen name="tracking" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="cancel-subscription" />
+        <Stack.Screen name="filter-help" />
+        <Stack.Screen name="parcel-problem" />
+        {/* Écran de fin : pas de retour par glissement vers une étape terminée. */}
+        <Stack.Screen name="done" options={{ gestureEnabled: false, animation: 'fade' }} />
       </Stack>
     </ToastProvider>
   )

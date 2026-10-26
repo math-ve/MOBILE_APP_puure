@@ -280,6 +280,18 @@ export default function TrackingScreen() {
   const status = data ? resolveStatus(data.status) : null
   const events = data?.events ?? []
   const visibleEvents = showAllEvents ? events : events.slice(0, EVENTS_PREVIEW_COUNT)
+
+  // « Un problème avec ce colis ? » (maquette P36), y compris quand le suivi est indisponible.
+  const parcelProblemLink = (
+    <TouchableOpacity
+      onPress={() => router.push({ pathname: '/parcel-problem', params: { orderNumber: order_number, trackingNumber: tracking_number } })}
+      style={styles.problemLink}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+    >
+      <Text style={styles.problemLinkText}>{t('care:parcel.link')}</Text>
+    </TouchableOpacity>
+  )
   const hiddenCount = events.length - EVENTS_PREVIEW_COUNT
 
   return (
@@ -335,6 +347,7 @@ export default function TrackingScreen() {
           <TouchableOpacity style={styles.errorBtn} onPress={() => router.back()} activeOpacity={0.8}>
             <Text style={styles.errorBtnText}>{t('tracking:backToOrders')}</Text>
           </TouchableOpacity>
+          {parcelProblemLink}
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -434,6 +447,8 @@ export default function TrackingScreen() {
               </View>
             </CascadeIn>
           )}
+
+          {parcelProblemLink}
         </ScrollView>
       )}
     </View>
@@ -720,6 +735,12 @@ const styles = StyleSheet.create({
   },
 
   // Erreur
+  problemLink: { alignSelf: 'center', paddingVertical: theme.spacing[3], paddingHorizontal: theme.spacing[4], marginTop: theme.spacing[2] },
+  problemLinkText: {
+    fontFamily: theme.typography.fontFamily.medium,
+    fontSize: theme.typography.size.base,
+    color: theme.colors.blue,
+  },
   errorWrap: {
     flex: 1,
     alignItems: 'center',
