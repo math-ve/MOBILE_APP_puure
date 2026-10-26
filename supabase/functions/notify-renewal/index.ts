@@ -1,82 +1,116 @@
-// Cron 08h00 UTC : rappel 3 jours avant chaque prélèvement d'abonnement.
-// Les dates viennent de subscriptions_cache, rafraîchi juste avant par
-// sync-subscriptions-daily (07h30). Le tap ouvre l'abonnement sur « Décaler ».
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { isTrustedCaller, json, preflight } from "../_shared/http.ts";
-import { formatDateFor, formatPriceFor, localized } from "../_shared/messages.ts";
 
-const DAYS_BEFORE = 3;
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 Deno.serve(async (req) => {
-  const pre = preflight(req);
-  if (pre) return pre;
-  if (!isTrustedCaller(req)) return json({ error: "Forbidden" }, 403);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // Déclenchée par cron (x-cron-secret) ou en interne (service role)
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const isCron = !!cronSecret && req.headers.get("x-cron-secret") === cronSecret;
+  const isService = (req.headers.get("authorization") ?? "") === `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  if (!isCron && !isService) {
+    return new Response(
+      JSON.stringify({ error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    const target = new Date();
-    target.setUTCDate(target.getUTCDate() + DAYS_BEFORE);
-    const day = target.toISOString().split("T")[0];
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 2);
+    const targetDateStr = targetDate.toISOString().split("T")[0];
 
     const { data: subscriptions, error } = await supabase
       .from("subscriptions_cache")
-      .select("user_id, appstle_subscription_id, product_name, next_billing_date, price_amount, price_currency")
+      .select("user_id, product_name, next_billing_date, price_amount, price_currency")
       .eq("status", "active")
-      .gte("next_billing_date", `${day}T00:00:00`)
-      .lte("next_billing_date", `${day}T23:59:59`);
+      .gte("next_billing_date", `${targetDateStr}T00:00:00`)
+      .lt("next_billing_date", `${targetDateStr}T23:59:59`);
+
     if (error) throw error;
 
-    console.log(`${subscriptions?.length ?? 0} prélèvement(s) le ${day}`);
-    let sent = 0, skipped = 0;
+    console.log(`Found ${subscriptions?.length ?? 0} subscriptions renewing in 2 days`);
+
+    const results = [];
+    const today = new Date().toISOString().split("T")[0];
 
     for (const sub of subscriptions ?? []) {
       const { data: profile } = await supabase
-        .from("profiles").select("push_token, language").eq("id", sub.user_id).single();
-      if (!profile?.push_token) { skipped++; continue; }
+        .from("profiles")
+        .select("push_token")
+        .eq("id", sub.user_id)
+        .single();
 
-      // Un seul rappel par contrat et par échéance.
-      const { data: already } = await supabase
+      if (!profile?.push_token) {
+        console.log(`No push token for user ${sub.user_id}`);
+        continue;
+      }
+
+      // Dédoublonnage — ne pas renvoyer si déjà envoyé aujourd'hui
+      const { data: existingLog } = await supabase
         .from("notification_logs")
         .select("id")
         .eq("user_id", sub.user_id)
         .eq("type", "subscription_renewal_soon")
-        .eq("data->>contract_id", sub.appstle_subscription_id)
-        .eq("data->>billing_date", day)
-        .limit(1);
-      if (already && already.length > 0) { skipped++; continue; }
+        .gte("sent_at", `${today}T00:00:00`)
+        .maybeSingle();
 
-      const msg = localized(profile.language, "renewalSoon", {
-        product: sub.product_name ?? "",
-        date: formatDateFor(profile.language, sub.next_billing_date),
-        price: formatPriceFor(profile.language, Number(sub.price_amount ?? 0), sub.price_currency ?? "EUR"),
+      if (existingLog) {
+        console.log(`Already sent renewal notification to user ${sub.user_id} today`);
+        continue;
+      }
+
+      const billingDate = new Date(sub.next_billing_date);
+      const dateFr = billingDate.toLocaleDateString("fr-FR", {
+        day: "numeric", month: "long", year: "numeric",
       });
+      const price = new Intl.NumberFormat("fr-FR", {
+        style: "currency", currency: sub.price_currency ?? "EUR",
+      }).format(sub.price_amount ?? 0);
 
-      const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-notification`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-        },
-        body: JSON.stringify({
-          user_id: sub.user_id,
-          title: msg.title,
-          body: msg.body,
-          data: {
-            type: "subscription_renewal_soon",
-            screen: `/subscription-detail?contractId=${sub.appstle_subscription_id}&open=reschedule`,
-            contract_id: sub.appstle_subscription_id,
-            billing_date: day,
+      const notifRes = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-notification`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
           },
-        }),
-      });
-      if (res.ok) sent++; else skipped++;
+          body: JSON.stringify({
+            user_id: sub.user_id,
+            title: "🔄 Renouvellement dans 2 jours",
+            body: `Votre abonnement ${sub.product_name} sera renouvelé le ${dateFr} pour ${price}`,
+            data: {
+              type: "subscription_renewal_soon",
+              screen: "/(tabs)/subscription",
+            },
+          }),
+        }
+      );
+
+      const notifResult = await notifRes.json();
+      results.push({ user_id: sub.user_id, result: notifResult });
     }
 
-    return json({ success: true, sent, skipped });
+    return new Response(
+      JSON.stringify({ success: true, processed: results.length, results }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
   } catch (err) {
     console.error("notify-renewal error:", err);
-    return json({ error: String(err) }, 500);
+    return new Response(
+      JSON.stringify({ error: String(err) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });

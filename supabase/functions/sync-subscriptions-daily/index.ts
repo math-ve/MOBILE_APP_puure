@@ -14,6 +14,11 @@ import { localized } from "../_shared/messages.ts";
 
 const CONCURRENCY = 4;
 
+// Notification « paiement refusé » : coupée tant que l'app qui permet de
+// changer de carte (≥ 1.0.2 / mise à jour à distance) n'est pas publiée.
+// La détection, elle, tourne toujours (bandeau juste dès la mise à jour).
+const PUSH_ENABLED = Deno.env.get("PAYMENT_FAILED_PUSH") === "on";
+
 Deno.serve(async (req) => {
   const pre = preflight(req);
   if (pre) return pre;
@@ -38,8 +43,10 @@ Deno.serve(async (req) => {
       try {
         const result = await syncUserSubscriptions(supabase, userId);
         synced += result.synced;
-        for (const f of result.newPaymentFailures) {
-          if (await notifyPaymentFailure(supabase, userId, f.contractId, f.productName)) notified++;
+        if (PUSH_ENABLED) {
+          for (const f of result.newPaymentFailures) {
+            if (await notifyPaymentFailure(supabase, userId, f.contractId, f.productName)) notified++;
+          }
         }
       } catch (e) {
         failed++;
@@ -50,7 +57,7 @@ Deno.serve(async (req) => {
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
   console.log(`Clients: ${userIds.length} | contrats: ${synced} | échecs: ${failed} | notifs paiement: ${notified}`);
-  return json({ success: true, customers: userIds.length, contracts: synced, errors: failed, paymentNotifications: notified });
+  return json({ success: true, customers: userIds.length, contracts: synced, errors: failed, paymentNotifications: notified, pushEnabled: PUSH_ENABLED });
 });
 
 async function notifyPaymentFailure(supabase: any, userId: string, contractId: string, productName: string | null) {
