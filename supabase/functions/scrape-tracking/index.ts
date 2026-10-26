@@ -126,7 +126,8 @@ Deno.serve(async (req) => {
       status: s?.latest_status?.status ?? null,
       sub_status: s?.latest_status?.sub_status ?? null,
       latest_event: latestEvent,
-      origin_country: s?.shipping_info?.shipper_address?.country ?? null,
+      // Le pays d'expédition n'est jamais exposé au client (cohérent avec cleanText).
+      origin_country: null,
       destination_country: s?.shipping_info?.recipient_address?.country ?? null,
       days_of_transit: s?.time_metrics?.days_of_transit ?? null,
       estimated_delivery: s?.time_metrics?.estimated_delivery_date?.from ?? null,

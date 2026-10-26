@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Puure uses the camera so you can send our team a picture of your tap.",
+    "NSPhotoLibraryUsageDescription": "Puure uses your photos so you can send our team a picture of your tap."
+  }
+}

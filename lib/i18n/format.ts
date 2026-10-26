@@ -45,9 +45,11 @@ export function formatDateTime(iso: string | number | Date): string {
 /** Montant en devise. `value` en unités principales (pas en centimes). */
 export function formatCurrency(value: number, currency = 'EUR'): string {
   if (typeof value !== 'number' || isNaN(value)) return ''
+  // narrowSymbol : « 39,90 £ » et non « 39,90 £GB » (symbole par défaut en français).
   return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency,
+    currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: 2,
   }).format(value)
 }

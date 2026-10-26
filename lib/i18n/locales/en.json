@@ -63,7 +63,7 @@
     "noNotifications": "No notifications yet"
   },
   "orders": {
-    "pageTitle": "My subscriptions",
+    "pageTitle": "Subscriptions & orders",
     "myOrders": "My orders",
     "updated": "Orders updated",
     "syncError": "Sync error",
@@ -111,7 +111,6 @@
     "manageBody": "What would you like to do?",
     "menuPause": "⏸ Pause",
     "menuCancel": "✕ Cancel subscription",
-
     "headerFallback": "Subscription",
     "tabDetails": "Details",
     "tabUpcoming": "Upcoming",
@@ -145,7 +144,6 @@
     "promoApplied": "Promo code applied",
     "manageSection": "Manage subscription",
     "pause": "⏸ Pause",
-    "resume": "▶ Resume",
     "cancel": "✕ Cancel subscription",
     "addressUpdated": "Address updated",
     "noUpcomingOrders": "No scheduled orders",
@@ -245,8 +243,8 @@
     "fieldName": "FILTER NAME",
     "fieldNamePlaceholder": "e.g. Kitchen filter",
     "fieldType": "TYPE",
-    "typeTap": "🚿 Tap",
-    "typeShower": "🚿 Shower",
+    "typeTap": "Tap",
+    "typeShower": "Shower",
     "fieldLocation": "LOCATION",
     "fieldLocationPlaceholder": "e.g. Kitchen, Bathroom",
     "fieldInstallDate": "INSTALLATION DATE",
@@ -483,6 +481,7 @@
     "outForDelivery": "Out for delivery",
     "deliveredMasc": "Delivered",
     "deliveredToSafePlace": "Delivered to your safe place",
-    "deliveredToNeighbour": "Delivered to your neighbour"
+    "deliveredToNeighbour": "Delivered to your neighbour",
+    "inTransit": "In transit"
   }
 }

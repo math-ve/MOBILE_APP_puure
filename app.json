@@ -2,7 +2,7 @@
   "expo": {
     "name": "Puure Filters",
     "slug": "puure-mobile",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,7 +19,11 @@
       "bundleIdentifier": "com.puurefilters.mobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleLocalizations": ["fr", "en", "de"],
+        "CFBundleLocalizations": [
+          "fr",
+          "en",
+          "de"
+        ],
         "CFBundleDevelopmentRegion": "fr"
       }
     },
@@ -52,7 +56,15 @@
           "color": "#2764FF"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Puure uses your photos so you can send our team a picture of your tap.",
+          "cameraPermission": "Puure uses the camera so you can send our team a picture of your tap.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -62,6 +74,11 @@
       "eas": {
         "projectId": "c1ed5ce2-a996-401f-a527-1f1705efef9e"
       }
+    },
+    "locales": {
+      "fr": "./locales-native/fr.json",
+      "de": "./locales-native/de.json",
+      "en": "./locales-native/en.json"
     }
   }
 }

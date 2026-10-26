@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Puure utilise l'appareil photo pour que vous puissiez envoyer à notre équipe une photo de votre robinet.",
+    "NSPhotoLibraryUsageDescription": "Puure accède à vos photos pour que vous puissiez envoyer à notre équipe une photo de votre robinet."
+  }
+}

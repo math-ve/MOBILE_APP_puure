@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Puure nutzt die Kamera, damit du unserem Team ein Foto deines Wasserhahns schicken kannst.",
+    "NSPhotoLibraryUsageDescription": "Puure greift auf deine Fotos zu, damit du unserem Team ein Foto deines Wasserhahns schicken kannst."
+  }
+}

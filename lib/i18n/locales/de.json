@@ -63,7 +63,7 @@
     "noNotifications": "Noch keine Benachrichtigungen"
   },
   "orders": {
-    "pageTitle": "Meine Abonnements",
+    "pageTitle": "Abos & Bestellungen",
     "myOrders": "Meine Bestellungen",
     "updated": "Bestellungen aktualisiert",
     "syncError": "Synchronisierungsfehler",
@@ -111,7 +111,6 @@
     "manageBody": "Was möchtest du tun?",
     "menuPause": "⏸ Pausieren",
     "menuCancel": "✕ Abonnement stornieren",
-
     "headerFallback": "Abonnement",
     "tabDetails": "Details",
     "tabUpcoming": "Anstehend",
@@ -145,7 +144,6 @@
     "promoApplied": "Gutscheincode angewendet",
     "manageSection": "Abonnement verwalten",
     "pause": "⏸ Pausieren",
-    "resume": "▶ Fortsetzen",
     "cancel": "✕ Abonnement stornieren",
     "addressUpdated": "Adresse aktualisiert",
     "noUpcomingOrders": "Keine geplanten Bestellungen",
@@ -245,8 +243,8 @@
     "fieldName": "FILTERNAME",
     "fieldNamePlaceholder": "z. B. Küchenfilter",
     "fieldType": "TYP",
-    "typeTap": "🚿 Wasserhahn",
-    "typeShower": "🚿 Dusche",
+    "typeTap": "Wasserhahn",
+    "typeShower": "Dusche",
     "fieldLocation": "STANDORT",
     "fieldLocationPlaceholder": "z. B. Küche, Badezimmer",
     "fieldInstallDate": "INSTALLATIONSDATUM",
@@ -483,6 +481,7 @@
     "outForDelivery": "In Zustellung",
     "deliveredMasc": "Geliefert",
     "deliveredToSafePlace": "An deinem sicheren Ort abgelegt",
-    "deliveredToNeighbour": "Beim Nachbarn abgegeben"
+    "deliveredToNeighbour": "Beim Nachbarn abgegeben",
+    "inTransit": "Unterwegs"
   }
 }

@@ -205,11 +205,10 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
           {!compact && <Text style={styles.bannerId}>#{sub.appstle_subscription_id}</Text>}
           {sub.status === 'cancelled' && (
             <Text style={styles.cancelledAt}>
+              {/* updated_at bouge à chaque synchro : ce n'est pas une date d'annulation. */}
               {sub.cancelled_at
                 ? t('subscription:cancelledOn', { date: formatDate(sub.cancelled_at) })
-                : sub.updated_at
-                  ? t('subscription:cancelledOn', { date: formatDate(sub.updated_at) })
-                  : t('subscription:cancelledShort')}
+                : t('subscription:cancelledShort')}
             </Text>
           )}
         </View>

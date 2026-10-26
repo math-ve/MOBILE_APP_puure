@@ -63,7 +63,7 @@
     "noNotifications": "Aucune notification pour le moment"
   },
   "orders": {
-    "pageTitle": "Mes abonnements",
+    "pageTitle": "Abonnements et commandes",
     "myOrders": "Mes commandes",
     "updated": "Commandes mises à jour",
     "syncError": "Erreur de synchronisation",
@@ -111,7 +111,6 @@
     "manageBody": "Que souhaitez-vous faire ?",
     "menuPause": "⏸ Mettre en pause",
     "menuCancel": "✕ Annuler l'abonnement",
-
     "headerFallback": "Abonnement",
     "tabDetails": "Détails",
     "tabUpcoming": "Prochaines",
@@ -145,7 +144,6 @@
     "promoApplied": "Code promo appliqué",
     "manageSection": "Gérer l'abonnement",
     "pause": "⏸ Mettre en pause",
-    "resume": "▶ Reprendre",
     "cancel": "✕ Annuler l'abonnement",
     "addressUpdated": "Adresse mise à jour",
     "noUpcomingOrders": "Aucune commande planifiée",
@@ -245,8 +243,8 @@
     "fieldName": "NOM DU FILTRE",
     "fieldNamePlaceholder": "Ex: Filtre cuisine",
     "fieldType": "TYPE",
-    "typeTap": "🚿 Robinet",
-    "typeShower": "🚿 Douche",
+    "typeTap": "Robinet",
+    "typeShower": "Douche",
     "fieldLocation": "EMPLACEMENT",
     "fieldLocationPlaceholder": "Ex: Cuisine, Salle de bain",
     "fieldInstallDate": "DATE D'INSTALLATION",
@@ -483,6 +481,7 @@
     "outForDelivery": "En cours de livraison",
     "deliveredMasc": "Livré",
     "deliveredToSafePlace": "Livré dans votre lieu sûr",
-    "deliveredToNeighbour": "Livré chez votre voisin"
+    "deliveredToNeighbour": "Livré chez votre voisin",
+    "inTransit": "En transit"
   }
 }

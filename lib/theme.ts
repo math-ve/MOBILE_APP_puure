@@ -134,7 +134,33 @@ export const animation = {
   },
 }
 
-export const theme = { colors, typography, radius, spacing, shadows, animation }
+/**
+ * Puure Design System (maquette « refonte 42 écrans »). Utilisé par les
+ * composants components/ds et les nouveaux parcours ; les écrans historiques
+ * gardent `colors` jusqu'à la refonte de la navigation.
+ */
+export const ds = {
+  surface: '#F5F6F8',
+  raised: '#FFFFFF',
+  tint: '#EDF1FA',
+  navy: '#0C1639',
+  ink: '#18191B',
+  body: '#4B5268',
+  muted: '#6B7288',
+  line: '#E6E8EC',
+  fill: '#F1F2F4',
+  blue: '#2764FF',
+  blueSoft: '#EAF0FF',
+  red: '#C8272D',
+  redSoft: '#FDECEC',
+  amber: '#A4670A',
+  amberSoft: '#FDF3E2',
+  backdrop: 'rgba(12, 22, 57, 0.45)',
+  radius: { card: 24, sheet: 28, pill: 999 },
+  control: 54,
+}
+
+export const theme = { colors, typography, radius, spacing, shadows, animation, ds }
 export default theme
 
 // Legacy aliases — keep existing imports working during migration
