@@ -79,6 +79,18 @@ RLS activé sur toutes les tables.
 - Migration : `supabase/migrations/20261016100000_analytics_tracking.sql` — à appliquer AVANT de déployer send-notification
 - Dashboard + déploiement complet : `puure-mobile-admin/docs/STATS.md`
 
+## Abonnement en libre-service (refonte 42 écrans, branche refonte-libre-service)
+- **Toutes** les actions d'abonnement de l'app passent par `subscription-api` (client `lib/subscriptionApi.ts`) : client identifié par son jeton, propriété du contrat et de la livraison vérifiée. Ne plus appeler get-subscription-detail / subscription-action / manage-subscription / sync-subscriptions (aucune vérification de propriétaire — à retirer)
+- Actions : detail, sync, skip, order-now, reschedule, update-frequency, update-address, apply-discount, pause, resume, cancel (motif + note Appstle), payment-link (e-mail Shopify, 1 / 24 h), retention-discount (inactif tant que le secret `RETENTION_DISCOUNT_CODE` n'est pas défini ; `RETENTION_DISCOUNT_PERCENT`, 20 par défaut)
+- Code partagé : `supabase/functions/_shared/` (http, appstle + synchro du cache, messages traduits)
+- Cron `sync-subscriptions-daily` 07h30 UTC : synchro Appstle + détection des paiements refusés (`subscriptions_cache.payment_failed_at`) + notification unique
+- `notify-renewal` : rappel J-3, langue du client, ouvre `/subscription-detail?contractId=…&open=reschedule`
+- Migration `20261026100000_subscription_self_service.sql` : colonnes paiement/annulation, bucket privé `support-photos`, cron 07h30
+- Écrans : `app/cancel-subscription.tsx` (motif → offre → confirmation), `app/done.tsx` (états de fin), `app/filter-help.tsx` (photo du robinet), `app/parcel-problem.tsx` ; feuilles dans `components/subscription/` ; composants Puure DS dans `components/ds/` (tokens `ds` de lib/theme.ts)
+- `subscription-detail` accepte `open=reschedule|payment|address` et se charge sans `subData`
+- Photo : `expo-image-picker` (build ≥ 1.0.2) chargé via `lib/photoPicker.ts` seulement s'il est présent → le JS reste compatible OTA avec 1.0.0 / 1.0.1
+- Tickets support : `lib/support.ts` (worker Cloudflare → Zendesk), photo = lien signé 30 jours
+
 ## Email
 - Domaine vérifié: noreply.puurefilters.com
 - From: noreply@noreply.puurefilters.com
