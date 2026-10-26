@@ -46,12 +46,22 @@ export function formatDateTime(iso: string | number | Date): string {
 export function formatCurrency(value: number, currency = 'EUR'): string {
   if (typeof value !== 'number' || isNaN(value)) return ''
   // narrowSymbol : « 39,90 £ » et non « 39,90 £GB » (symbole par défaut en français).
-  return new Intl.NumberFormat(currentLocale(), {
+  const formatted = new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency,
     currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: 2,
   }).format(value)
+  // Hermes (iOS) ignore narrowSymbol : on remplace nous-mêmes les symboles longs.
+  const narrow = NARROW_SYMBOLS[currency]
+  return narrow ? formatted.replace(narrow.long, narrow.short) : formatted
+}
+
+const NARROW_SYMBOLS: Record<string, { long: RegExp; short: string }> = {
+  GBP: { long: /£\s?GB|GB\s?£/, short: '£' },
+  USD: { long: /\$\s?US|US\s?\$/, short: '$' },
+  CAD: { long: /\$\s?CA|CA\s?\$/, short: '$' },
+  AUD: { long: /\$\s?AU|AU\s?\$|A\$/, short: '$' },
 }
 
 /**

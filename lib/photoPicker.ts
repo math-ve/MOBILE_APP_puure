@@ -19,10 +19,12 @@ export async function pickPhoto(source: Source): Promise<PickedPhoto | null | 'd
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const ImagePicker = require('expo-image-picker') as typeof ImagePickerModule
 
-  const permission = source === 'camera'
-    ? await ImagePicker.requestCameraPermissionsAsync()
-    : await ImagePicker.requestMediaLibraryPermissionsAsync()
-  if (!permission.granted) return 'denied'
+  // La galerie passe par le sélecteur système (iOS 14+) : aucune autorisation
+  // d'accès à la photothèque n'est nécessaire. Seul l'appareil photo en demande une.
+  if (source === 'camera') {
+    const permission = await ImagePicker.requestCameraPermissionsAsync()
+    if (!permission.granted) return 'denied'
+  }
 
   const options = { mediaTypes: ['images'] as ImagePickerModule.MediaType[], quality: 0.6, exif: false }
   const result = source === 'camera'

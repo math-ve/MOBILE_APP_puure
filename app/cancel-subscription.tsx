@@ -50,11 +50,8 @@ export default function CancelSubscriptionScreen() {
   // Le motif « trop cher » n'a pas d'écran d'offre tant que la remise n'est pas activée.
   const hasOffer = (r: CancelReason) => r !== 'price' || !!offer
 
-  const plan = useMemo(() => {
-    const line = Array.isArray(sub?.contract_details_json) ? sub.contract_details_json[0] : null
-    const variant = line?.variantTitle && line.variantTitle !== 'Default Title' ? line.variantTitle : null
-    return [variant ?? sub?.product_name, formatFrequency(sub?.frequency_unit, sub?.frequency_value)].filter(Boolean).join(' · ')
-  }, [sub])
+  // « Tous les 6 mois » : le rythme suffit (le produit est rappelé dans l'écran d'abonnement).
+  const plan = useMemo(() => formatFrequency(sub?.frequency_unit, sub?.frequency_value), [sub])
 
   const chooseReason = (r: CancelReason) => {
     setReason(r)

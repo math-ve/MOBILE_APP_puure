@@ -126,8 +126,9 @@ const styles = StyleSheet.create({
 
   card: { backgroundColor: ds.raised, borderWidth: 1, borderColor: ds.line, borderRadius: ds.radius.card, paddingVertical: 18, paddingHorizontal: 20, gap: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  rowLabel: { flex: 1, fontFamily: typography.fontFamily.regular, fontSize: 15, color: ds.body },
-  rowValue: { fontFamily: typography.fontFamily.medium, fontSize: 15, color: ds.ink, textAlign: 'right' },
+  // Le libellé garde sa largeur ; c'est la valeur qui passe à la ligne si elle est longue.
+  rowLabel: { flexShrink: 0, maxWidth: '55%', fontFamily: typography.fontFamily.regular, fontSize: 15, color: ds.body },
+  rowValue: { flex: 1, fontFamily: typography.fontFamily.medium, fontSize: 15, color: ds.ink, textAlign: 'right' },
 
   banner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

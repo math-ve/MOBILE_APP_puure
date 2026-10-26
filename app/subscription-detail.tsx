@@ -522,7 +522,8 @@ export default function SubscriptionDetailScreen() {
   const [skipTarget, setSkipTarget] = useState<any>(null)
   const [pastOrderSheet, setPastOrderSheet] = useState<any>(null)
   const contentFade = useRef(new Animated.Value(1)).current
-  const openedFromParam = useRef(false)
+  // Dernière feuille demandée par lien déjà ouverte (un nouveau lien sur le même écran en rouvre une).
+  const handledOpen = useRef<string | null>(null)
 
   const contractLines = useMemo<any[]>(() => {
     const raw = sub.contract_details_json ?? sub.contractDetailsJSON
@@ -556,8 +557,9 @@ export default function SubscriptionDetailScreen() {
 
   // Feuille demandée par le lien d'arrivée (notification J-3, parcours d'annulation).
   useEffect(() => {
-    if (loading || openedFromParam.current || !open) return
-    openedFromParam.current = true
+    if (loading || !open || handledOpen.current === open) return
+    handledOpen.current = open
+    setRescheduleSheet(false); setPaymentSheet(false); setAddressSheet(false)
     if (open === 'reschedule') setRescheduleSheet(true)
     else if (open === 'payment') setPaymentSheet(true)
     else if (open === 'address') setAddressSheet(true)

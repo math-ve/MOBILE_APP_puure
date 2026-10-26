@@ -38,10 +38,12 @@ export default function DoneScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {})
   }, [kind])
 
-  const goHome = () => { router.dismissAll(); router.replace('/(tabs)') }
+  // Referme les écrans du parcours (s'il y en a) avant d'aller à la destination.
+  const closeFlow = () => { if (router.canDismiss()) router.dismissAll() }
+  const goHome = () => { closeFlow(); router.replace('/(tabs)') }
   const goSubscription = () => {
     if (!p.contractId) return goHome()
-    router.dismissAll()
+    closeFlow()
     router.push({ pathname: '/subscription-detail', params: { contractId: p.contractId } })
   }
 
