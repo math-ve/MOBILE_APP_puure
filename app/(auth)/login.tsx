@@ -10,6 +10,7 @@ import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
+import { track } from '../../lib/analytics'
 import Logo from '../../components/ui/Logo'
 import { NOTIF_INTRO_SEEN_KEY } from './notifications-intro'
 
@@ -93,6 +94,7 @@ export default function LoginScreen() {
         password,
       })
       if (authError) { setError(t('auth:passwordInvalid')); return }
+      track('login_password')
       const seen = await AsyncStorage.getItem(NOTIF_INTRO_SEEN_KEY)
       router.replace(seen ? '/(tabs)' : '/(auth)/notifications-intro')
     } catch { setError(t('auth:verificationError')) }

@@ -68,7 +68,16 @@ RLS activé sur toutes les tables.
 - Crons planifiés via pg_cron (migration supabase/migrations/20260611090000_notifications_cron.sql)
 - `sync-orders` notifie "Commande expédiée" sur transition de statut → fulfilled
 - App : channel Android "default", badge remis à 0 à l'ouverture, tap sur notif → router.push(data.screen), push_token nettoyé au signOut, centre de notifications dans la cloche du dashboard (notification_logs + AsyncStorage notifications_last_seen)
-- ⚠️ Restant : credentials FCM Android (google-services.json + EAS) et clé APNs iOS (eas credentials) à configurer pour les builds
+- iOS : clé APNs configurée (notifications reçues sur TestFlight depuis l'admin)
+- ⚠️ Restant : credentials FCM Android (google-services.json + EAS) à configurer avant une sortie Play Store
+
+## Analytics (stats admin)
+- `lib/analytics.ts` : `track(name, props)`, `trackScreen`, `identify`/`reset`, `trackNotificationOpened` — événements bufferisés dans `analytics_events` (RLS : l'utilisateur n'écrit que les siens), JS uniquement (OTA possible)
+- Sessions = temps au premier plan (nouvelle session après 30 min en arrière-plan) ; `profiles` reçoit appareil, version, `last_seen_at`
+- `send-notification` ajoute `data.notification_id` (= id du log) → `notification_logs.opened_at` au tap ; `check-push-receipts` remplit `delivery_status`
+- `magic-link` trace l'entonnoir de connexion (`auth_otp_*`)
+- Migration : `supabase/migrations/20261016100000_analytics_tracking.sql` — à appliquer AVANT de déployer send-notification
+- Dashboard + déploiement complet : `puure-mobile-admin/docs/STATS.md`
 
 ## Email
 - Domaine vérifié: noreply.puurefilters.com

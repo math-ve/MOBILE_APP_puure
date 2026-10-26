@@ -10,6 +10,7 @@ import Svg, { Path } from 'react-native-svg'
 import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
+import * as analytics from '../../lib/analytics'
 import theme from '../../lib/theme'
 import { formatDate, formatDateShort, formatTime } from '../../lib/i18n/format'
 import ProgressRing from '../../components/ui/ProgressRing'
@@ -238,12 +239,15 @@ export default function HomeScreen() {
     if (user) {
       await supabase.from('profiles').update({ push_token: null }).eq('id', user.id)
     }
+    analytics.track('sign_out')
+    await analytics.reset()
     await supabase.auth.signOut()
     router.replace('/(auth)/login')
   }
 
   const openNotifications = async () => {
     setNotifSheetOpen(true)
+    analytics.track('notification_center_opened', { had_unread: hasUnread })
     setHasUnread(false)
     await AsyncStorage.setItem(NOTIF_LAST_SEEN_KEY, new Date().toISOString())
   }

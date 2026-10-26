@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import Constants from 'expo-constants'
 import Svg, { Path } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
+import * as analytics from '../lib/analytics'
 import theme from '../lib/theme'
 import {
   SUPPORTED_LANGUAGES,
@@ -50,16 +51,20 @@ export default function SettingsScreen() {
   const pickLanguage = async (lang: Language) => {
     await setLanguage(lang, persist)
     setManual(true)
+    analytics.track('language_changed', { language: lang, mode: 'manual' })
   }
 
   const pickAuto = async () => {
     await useDeviceLanguage(persist)
     setManual(false)
+    analytics.track('language_changed', { mode: 'auto' })
   }
 
   const handleSignOut = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) await supabase.from('profiles').update({ push_token: null }).eq('id', user.id)
+    analytics.track('sign_out')
+    await analytics.reset()
     await supabase.auth.signOut()
     router.replace('/(auth)/login')
   }

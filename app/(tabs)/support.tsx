@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase'
 import theme from '../../lib/theme'
 import i18n from '../../lib/i18n'
 import { useToast } from '../../hooks/useToast'
+import { track } from '../../lib/analytics'
 import Logo from '../../components/ui/Logo'
 
 // Worker Cloudflare qui crée le ticket Zendesk — même endpoint que le site
@@ -309,6 +310,7 @@ export default function SupportScreen() {
         body: JSON.stringify(payload),
       })
 
+      track('support_ticket_sent', { category: subValue, group: groupValue, success: response.status === 201 })
       if (response.status === 201) {
         setGroupValue(null)
         setSubValue(null)
@@ -320,6 +322,7 @@ export default function SupportScreen() {
         showToast(t('support:sendError'), 'error')
       }
     } catch {
+      track('support_ticket_sent', { category: subValue, group: groupValue, success: false })
       setFeedback({ text: t('support:errorGeneric'), type: 'error' })
       showToast(t('support:sendError'), 'error')
     } finally {

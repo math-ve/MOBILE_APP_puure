@@ -47,11 +47,22 @@ Deno.serve(async (req) => {
       .single();
 
     if (error || !profile?.push_token) {
+      try {
+        await supabase.from("analytics_events").insert({
+          source: "server", name: "push_skipped_no_token", user_id,
+          properties: { type: data.type ?? "info", campaign_id: data.campaign_id ?? null },
+        });
+      } catch (_) { /* analytics best-effort */ }
       return new Response(
         JSON.stringify({ error: "No push token found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Id du log connu AVANT l'envoi : l'app le renvoie au tap (notification_id)
+    // pour mesurer le taux d'ouverture.
+    const logId = crypto.randomUUID();
+    const payloadData = { ...data, notification_id: logId };
 
     const expoToken = Deno.env.get("EXPO_ACCESS_TOKEN")!;
     const res = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -64,7 +75,7 @@ Deno.serve(async (req) => {
         to: profile.push_token,
         title,
         body,
-        data,
+        data: payloadData,
         sound: "default",
         priority: "high",
       }),
@@ -73,13 +84,23 @@ Deno.serve(async (req) => {
     const result = await res.json();
     console.log("Expo push result:", JSON.stringify(result));
 
+    // Erreur immédiate d'Expo (ex: DeviceNotRegistered) → statut connu tout de
+    // suite ; sinon le statut final vient des receipts (check-push-receipts).
+    const ticket = result.data ?? {};
+    const isUuid = (v: unknown) => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
+
     await supabase.from("notification_logs").insert({
+      id: logId,
       user_id,
       type: data.type ?? "info",
       title,
       body,
-      data,
-      expo_receipt_id: result.data?.id ?? null,
+      data: payloadData,
+      expo_receipt_id: ticket.id ?? null,
+      campaign_id: isUuid(data.campaign_id) ? data.campaign_id : null,
+      template_id: isUuid(data.template_id) ? data.template_id : null,
+      delivery_status: ticket.status === "error" ? "error" : null,
+      delivery_error: ticket.status === "error" ? (ticket.details?.error ?? ticket.message ?? "unknown") : null,
     });
 
     return new Response(

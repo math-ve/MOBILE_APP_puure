@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
+import { track } from '../../lib/analytics'
 import theme from '../../lib/theme'
 import { formatDate } from '../../lib/i18n/format'
 import { i18n } from '../../lib/i18n'
@@ -218,6 +219,7 @@ function AddFilterModal({ visible, userId, onClose, onSaved }: AddFilterModalPro
       if (timerErr) throw timerErr
 
       reset()
+      track('filter_added', { filter_type: type, lifespan_days: duration })
       showToast(t('filters:filterAdded'), 'success')
       onSaved()
     } catch {
@@ -397,6 +399,7 @@ export default function FiltersScreen() {
       is_active: true,
     })
     if (error) { showToast(t('common:errorGeneric'), 'error'); return }
+    track('cartridge_timer_started', { filter_type: filter.filter_type })
     showToast(t('filters:timerStarted'), 'success')
     await load()
   }
@@ -427,6 +430,10 @@ export default function FiltersScreen() {
                 total_paused_seconds: 0,
                 is_active: true,
               })
+              track('cartridge_replaced', {
+                filter_type: filter.filter_type,
+                progress: timer ? calcProgress(timer) : null,
+              })
               showToast(t('filters:newCartridgeSaved'), 'success')
               await load()
             } catch {
@@ -454,12 +461,14 @@ export default function FiltersScreen() {
             total_paused_seconds: (timer.total_paused_seconds ?? 0) + addedSeconds,
           })
           .eq('id', timer.id)
+        track('cartridge_timer_resumed', { paused_s: addedSeconds })
         showToast(t('filters:timerResumed'), 'success')
       } else {
         await supabase
           .from('cartridge_timers')
           .update({ paused_at: new Date().toISOString() })
           .eq('id', timer.id)
+        track('cartridge_timer_paused')
         showToast(t('filters:timerPaused'), 'success')
       }
       await load()
@@ -485,6 +494,7 @@ export default function FiltersScreen() {
                 await supabase.from('cartridge_timers').update({ is_active: false }).eq('id', timer.id)
               }
               await supabase.from('filters').update({ is_active: false }).eq('id', filter.id)
+              track('filter_removed', { filter_type: filter.filter_type })
               showToast(t('filters:filterDeleted'), 'success')
               await load()
             } catch {

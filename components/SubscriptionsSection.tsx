@@ -7,6 +7,7 @@ import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../lib/supabase'
+import { track } from '../lib/analytics'
 import theme from '../lib/theme'
 import { getSubscriptionStatus } from '../lib/statuses'
 import { formatDate as formatLocaleDate, formatCurrency, formatFrequency } from '../lib/i18n/format'
@@ -146,6 +147,7 @@ const SubscriptionsSection = forwardRef<SubscriptionsSectionHandle>((_props, ref
         body: JSON.stringify({ user_id: session.user.id, subscription_contract_id: contractId, action }),
       })
       const json = await res.json()
+      track('subscription_action', { action, success: !!json.success, screen_source: 'subscriptions-section' })
       if (!json.success) throw new Error(json.error ?? 'Unknown error')
       await triggerSync().catch(() => {})
       await loadSubscriptions()

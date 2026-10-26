@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Platform, AppState } from 'react-native'
-import { Stack, router } from 'expo-router'
+import { Stack, router, usePathname } from 'expo-router'
 import * as Linking from 'expo-linking'
 import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
@@ -15,11 +15,13 @@ import {
 import { supabase } from '../lib/supabase'
 import { ToastProvider } from '../hooks/useToast'
 import { initI18n, hasManualLanguage, getDeviceLanguage, i18n } from '../lib/i18n'
+import * as analytics from '../lib/analytics'
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bHFkcnJsZ2dvbGdkc3Nkd29oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2ODkyNjIsImV4cCI6MjA5NTI2NTI2Mn0.859w5rLfcdZWG_vhk0tQM0cqcwRluIFlHjLIsM3Sr5o'
 
 SplashScreen.preventAutoHideAsync()
+analytics.installErrorTracking()
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -115,6 +117,11 @@ export default function RootLayout() {
     InstrumentSans_700Bold,
   })
   const [i18nReady, setI18nReady] = useState(false)
+  const pathname = usePathname()
+
+  useEffect(() => {
+    analytics.trackScreen(pathname)
+  }, [pathname])
 
   useEffect(() => {
     initI18n().then(() => setI18nReady(true))
@@ -134,12 +141,14 @@ export default function RootLayout() {
 
     // Tap sur une notification (app en background)
     const notifResponseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      analytics.trackNotificationOpened(response.notification.request.content.data)
       handleNotificationNavigation(response.notification.request.content.data)
     })
 
     // Tap sur une notification (cold start) — léger délai le temps que le router monte
     Notifications.getLastNotificationResponseAsync().then((response) => {
       if (response) {
+        analytics.trackNotificationOpened(response.notification.request.content.data)
         setTimeout(() => {
           handleNotificationNavigation(response.notification.request.content.data)
         }, 500)
@@ -166,6 +175,10 @@ export default function RootLayout() {
     })
 
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event, session) => {
+      // INITIAL_SESSION : app relancée avec une session déjà présente
+      if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        analytics.identify(session.user.id)
+      }
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         registerPushToken(session.user.id)
         syncLanguage(session.user.id)

@@ -11,6 +11,7 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import Svg, { Path } from 'react-native-svg'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../lib/supabase'
+import { track } from '../lib/analytics'
 import theme from '../lib/theme'
 import i18n from '../lib/i18n'
 import { formatDate as fmtDate, formatDateShort as fmtDateShort, formatCurrency, formatFrequency } from '../lib/i18n/format'
@@ -211,6 +212,7 @@ function FrequencySheet({ contractId, currentValue, onClose, onSaved }: {
         body: JSON.stringify({ action: 'update-frequency', contractId, billingIntervalCount: selected }),
       })
       const json = await res.json()
+      track('subscription_action', { action: 'update-frequency', success: !!json.success, screen_source: 'subscription-detail' })
       if (!json.success) throw new Error(json.error ?? 'Erreur')
       showToast(t('subscription:freqUpdated'), 'success')
       onSaved()
@@ -340,6 +342,7 @@ function AddressSheet({ contractId, initial, onClose, onSaved }: {
         body: JSON.stringify({ action: 'update-address', contractId, address }),
       })
       const json = await res.json()
+      track('subscription_action', { action: 'update-address', success: !!json.success, screen_source: 'subscription-detail' })
       if (!json.success) {
         let errMsg = json.error ?? `HTTP ${res.status}`
         if (json.raw) {
@@ -464,6 +467,7 @@ function RescheduleSheet({ contractId, attemptId, onClose, onSaved }: {
         }),
       })
       const json = await res.json()
+      track('subscription_action', { action: 'reschedule', success: !!json.success, screen_source: 'subscription-detail' })
       if (!json.success) throw new Error(json.error ?? 'Erreur')
       showToast(t('subscription:orderRescheduled'), 'success')
       onSaved()
@@ -687,6 +691,7 @@ export default function SubscriptionDetailScreen() {
         body: JSON.stringify({ action, contractId, ...extra }),
       })
       const json = await res.json()
+      track('subscription_action', { action: action, success: !!json.success, screen_source: 'subscription-detail' })
       if (!json.success) throw new Error(json.error ?? 'Unknown error')
       return true
     } catch (e: any) {
@@ -708,6 +713,7 @@ export default function SubscriptionDetailScreen() {
         body: JSON.stringify({ user_id: session.user.id, subscription_contract_id: contractId, action }),
       })
       const json = await res.json()
+      track('subscription_action', { action: action, success: !!json.success, screen_source: 'subscription-detail' })
       if (!json.success) throw new Error(json.error ?? 'Erreur')
       const msgs = {
         pause: t('subscription:actionPaused'),

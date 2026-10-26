@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
+import { track } from '../../lib/analytics'
 import theme from '../../lib/theme'
 import Logo from '../../components/ui/Logo'
 
@@ -26,6 +27,15 @@ export default function NotificationsIntroScreen() {
     { icon: '📦', title: t('auth:notifBenefit3Title'), text: t('auth:notifBenefit3Text') },
   ]
 
+  useEffect(() => {
+    track('notif_intro_shown')
+  }, [])
+
+  const skip = async () => {
+    track('notif_intro_skipped')
+    await finish()
+  }
+
   const finish = async () => {
     await AsyncStorage.setItem(NOTIF_INTRO_SEEN_KEY, 'true')
     router.replace('/(tabs)')
@@ -41,6 +51,7 @@ export default function NotificationsIntroScreen() {
           const { status } = await Notifications.requestPermissionsAsync()
           finalStatus = status
         }
+        track('notif_intro_result', { status: finalStatus })
         // Si accordée, on enregistre le token tout de suite
         if (finalStatus === 'granted') {
           const { data: { user } } = await supabase.auth.getUser()
@@ -102,7 +113,7 @@ export default function NotificationsIntroScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={finish} disabled={loading} activeOpacity={0.6}>
+        <TouchableOpacity onPress={skip} disabled={loading} activeOpacity={0.6}>
           <Text style={styles.skip}>{t('auth:notifLater')}</Text>
         </TouchableOpacity>
       </View>
