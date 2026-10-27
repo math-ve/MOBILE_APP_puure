@@ -14,27 +14,22 @@
 
 ## Structure
 ```
-puure-mobile-v2/          ← app React Native
+puure-mobile-v2/            ← app React Native (maquette Puure DS, 42 écrans P01 → P42)
   app/
-    _layout.tsx           ← root layout, gestion deep links
-    (auth)/
-      _layout.tsx
-      login.tsx           ← écran login avec OTP 6 chiffres
-    (tabs)/
-      _layout.tsx         ← navigation tabs
-      index.tsx           ← dashboard accueil
-      orders.tsx          ← historique commandes (placeholder)
-      subscription.tsx    ← abonnement (placeholder)
-      filters.tsx         ← mes filtres + timer cartouche (placeholder)
-      support.tsx         ← support Zendesk (placeholder)
-  lib/
-    supabase.ts           ← client Supabase configuré
+    _layout.tsx             ← root layout, deep links, Stack des écrans hors onglets
+    (auth)/login.tsx        ← P01 e-mail (vidéo) → P02 code 6 chiffres
+    (auth)/notifications-intro.tsx ← P03
+    (tabs)/                 ← 3 onglets : Mon eau (index), Commandes (orders), Support (support)
+    subscription-detail.tsx ← P08/P19/P20/P33, barre d'onglets fixe (StaticTabBar « Commandes »)
+    tracking.tsx, tracking-history.tsx ← P11/P15/P17, P16
+    cancel-subscription.tsx ← P27 → P30, P37 → P39, confirmation P22 en feuille
+    add-filter.tsx (P07), filter-help.tsx (P34), notifications.tsx (P14), settings.tsx (P13), done.tsx (P35/P41/P42)
+  components/ds/            ← Puure DS : Sheet, PillButton, Field/GroupCard, RadioRow, ChoiceRow, Flow (FlowScreen, Hero…), Glyph, AppHeader
+  components/subscription/  ← feuilles P09, P18, P21, P25, P31, P40 + PlanCard
+  components/orders/, components/water/
+  lib/                      ← supabase, subscriptionApi, support, plan, orders, tracking, water, i18n…
 
-mobile-app/               ← backend Supabase CLI
-  supabase/
-    functions/
-      magic-link/         ← Edge Function auth OTP
-        index.ts
+../supabase/ (mobile-app)   ← backend Supabase CLI (copie miroir de puure-mobile-v2/supabase)
 ```
 
 ## Authentification
@@ -88,7 +83,7 @@ RLS activé sur toutes les tables.
 - Notification « paiement refusé » : coupée tant que le secret `PAYMENT_FAILED_PUSH` ≠ `on` (la détection tourne quand même)
 - Anciennes fonctions (get-subscription-detail, manage-subscription, subscription-action, sync-subscriptions, sync-orders) : sécurisées en production par `_shared/legacyGuard.ts` — sources déployées dans `supabase/legacy-prod/` (les copies de `supabase/functions/` diffèrent de la prod, ne pas les redéployer)
 - Migration `20261026100000_subscription_self_service.sql` : colonnes paiement/annulation, bucket privé `support-photos`, cron 07h30
-- Écrans : `app/cancel-subscription.tsx` (motif → offre → confirmation), `app/done.tsx` (états de fin), `app/filter-help.tsx` (photo du robinet), `app/parcel-problem.tsx` ; feuilles dans `components/subscription/` ; composants Puure DS dans `components/ds/` (tokens `ds` de lib/theme.ts)
+- Écrans : `app/cancel-subscription.tsx` (motif → offre → confirmation en feuille), `app/done.tsx` (états de fin), `app/filter-help.tsx` (photo du robinet), « problème de colis » = `components/orders/ParcelProblemSheet.tsx` ; feuilles dans `components/subscription/` ; composants Puure DS dans `components/ds/` (tokens `ds` de lib/theme.ts)
 - `subscription-detail` accepte `open=reschedule|payment|address` et se charge sans `subData`
 - Photo : `expo-image-picker` (build ≥ 1.0.2) chargé via `lib/photoPicker.ts` seulement s'il est présent → le JS reste compatible OTA avec 1.0.0 / 1.0.1
 - Tickets support : `lib/support.ts` (worker Cloudflare → Zendesk), photo = lien signé 30 jours

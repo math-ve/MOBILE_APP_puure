@@ -45,7 +45,7 @@ export function getOrderStatus(status: string | null | undefined): StatusStyle &
   return { ...style, label }
 }
 
-// ─── Abonnements (subscription-detail.tsx, SubscriptionsSection.tsx) ──
+// ─── Abonnements (subscription-detail.tsx) ──
 
 const SUBSCRIPTION_STYLES: Record<string, StatusStyle> = {
   active: { bg: 'rgba(30,187,110,0.12)', color: theme.colors.success },

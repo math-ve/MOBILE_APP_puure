@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import Svg, { Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { router } from 'expo-router'
 import { ds, typography } from '../../lib/theme'
 
 // Barre de navigation du Puure DS (maquette P04) : pilule blanche flottante,
@@ -100,3 +101,37 @@ const styles = StyleSheet.create({
   label: { fontFamily: typography.fontFamily.medium, fontSize: 13, color: ds.muted },
   labelActive: { color: ds.ink },
 })
+
+/**
+ * Même barre, pour un écran ouvert par-dessus les onglets (détail de
+ * l'abonnement, maquette P08) : l'onglet parent reste en surbrillance.
+ */
+export function StaticTabBar({ active }: { active: 'index' | 'orders' | 'support' }) {
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
+  const go = (name: string) => {
+    if (name === active) return router.back()
+    router.dismissAll()
+    router.navigate(name === 'index' ? '/(tabs)' : (`/(tabs)/${name}` as any))
+  }
+  return (
+    <View accessibilityRole="tablist" style={[styles.bar, { bottom: insets.bottom > 0 ? insets.bottom - 6 : 16 }]}>
+      {(Object.keys(TABS) as ('index' | 'orders' | 'support')[]).map((name) => {
+        const focused = name === active
+        const { labelKey, Icon } = TABS[name]
+        return (
+          <Pressable
+            key={name}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: focused }}
+            onPress={() => { Haptics.selectionAsync().catch(() => {}); go(name) }}
+            style={({ pressed }) => [styles.item, focused && styles.itemActive, pressed && !focused && { opacity: 0.7 }]}
+          >
+            <Icon color={focused ? ds.blue : ds.muted} />
+            <Text style={[styles.label, focused && styles.labelActive]}>{t(labelKey)}</Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+}

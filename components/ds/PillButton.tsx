@@ -20,10 +20,12 @@ type Props = {
   loading?: boolean
   disabled?: boolean
   style?: ViewStyle
+  /** Couleur du libellé imposée (ex. « Appliquer » bleu sur bouton blanc, P08). */
+  labelColor?: string
   accessibilityHint?: string
 }
 
-export default function PillButton({ label, onPress, variant = 'primary', loading, disabled, style, accessibilityHint }: Props) {
+export default function PillButton({ label, onPress, variant = 'primary', loading, disabled, style, labelColor, accessibilityHint }: Props) {
   const inactive = disabled || loading
   return (
     <Pressable
@@ -46,7 +48,7 @@ export default function PillButton({ label, onPress, variant = 'primary', loadin
     >
       {loading
         ? <ActivityIndicator color={variant === 'primary' || variant === 'destructive' ? '#fff' : ds.blue} />
-        : <Text style={[styles.label, labelStyles[variant]]} numberOfLines={1}>{label}</Text>}
+        : <Text style={[styles.label, labelStyles[variant], labelColor ? { color: labelColor } : null]} numberOfLines={1}>{label}</Text>}
     </Pressable>
   )
 }

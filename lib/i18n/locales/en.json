@@ -23,8 +23,8 @@
     "title": "Settings",
     "openA11y": "Settings",
     "language": "Language",
-    "languageAuto": "Automatic (phone language)",
-    "languageAutoHint": "The app follows your phone's language: {{language}}",
+    "languageAuto": "Automatic",
+    "languageAutoHint": "Phone language: {{language}}",
     "fr": "Français",
     "en": "English",
     "de": "Deutsch",
@@ -79,7 +79,8 @@
     "trackOrder": "Track my order →",
     "helpTitle": "A problem with an order?",
     "helpSub": "Our team replies quickly.",
-    "contactSupport": "Contact support"
+    "contactSupport": "Contact support",
+    "track": "Track my order"
   },
   "subscription": {
     "sectionHeading": "My subscription",
@@ -210,7 +211,29 @@
       "preparing": "Preparing",
       "refunded": "Refunded",
       "confirmed": "Confirmed"
-    }
+    },
+    "statusActive": "Active",
+    "statusPaused": "Paused",
+    "statusCancelled": "Cancelled",
+    "price": "Price",
+    "upcomingFirst": "Next order",
+    "upcomingNext": "Following",
+    "upcomingCaption": "{{items}} delivered {{frequency}}.",
+    "upcomingCaptionPlain": "Delivered {{frequency}}.",
+    "seeDetail": "See details",
+    "orderTitle": "Order {{name}}",
+    "productLine": "{{plan}} · quantity {{count}}",
+    "dsFirstName": "First name",
+    "dsLastName": "Last name",
+    "dsAddress": "Address",
+    "dsAddress2": "Address line 2 (optional)",
+    "dsZip": "Postcode",
+    "dsCity": "City",
+    "phAddress2Ds": "Apartment, building, floor",
+    "gotIt": "Got it",
+    "missingFieldsShort": "Please fill in every field except line 2.",
+    "pausedCardBody": "No more deliveries or payments. Restart it whenever you like.",
+    "cancelledCardBody": "You will no longer be charged."
   },
   "filters": {
     "pageTitle": "My filters",
@@ -427,7 +450,15 @@
       "complaint_/_escalation__repeated_contact": "Repeated contact",
       "complaint_/_escalation__escalation_request": "Escalation request",
       "other__other": "Other"
-    }
+    },
+    "introDs": "A question? Fill in the form and we'll get back to you by email.",
+    "emailDs": "Your email address",
+    "categoryDs": "Category",
+    "messageDs": "Your message",
+    "messagePlaceholderDs": "Describe your request",
+    "writeUs": "Or write to us: ",
+    "needCategory": "Choose a category.",
+    "needEmail": "Enter your email address."
   },
   "systems": {
     "heading": "Your Puure systems",
@@ -440,9 +471,9 @@
     "messagePartial": "Complete your protection for perfectly filtered water."
   },
   "auth": {
-    "loginTitle": "Sign in",
-    "loginSubtitle": "Enter your email to receive\nyour sign-in code",
-    "emailPlaceholder": "you@email.com",
+    "loginTitle": "Your Puure space",
+    "loginSubtitle": "Your filters and your orders.",
+    "emailPlaceholder": "Your email",
     "emailInvalid": "Invalid email",
     "sendCode": "Get the code",
     "sending": "Sending...",
@@ -456,21 +487,22 @@
     "verifying": "Verifying...",
     "signIn": "Sign in",
     "verificationError": "Verification error.",
-    "changeEmail": "← Change email address",
+    "changeEmail": "Change email address",
     "passwordPlaceholder": "Password",
     "passwordInvalid": "Incorrect email or password",
-    "backToCode": "← Sign in with a code",
+    "backToCode": "Sign in with a code",
     "notifTitle": "Never miss a thing",
-    "notifSubtitle": "Turn on notifications to get the most out of your filtered water.",
+    "notifSubtitle": "Turn on notifications to get the most out of your filter.",
     "notifBenefit1Title": "Cartridge reminder",
-    "notifBenefit1Text": "Know exactly when to replace your cartridge — not too early, not too late.",
+    "notifBenefit1Text": "Know when to replace your cartridge, not too early, not too late.",
     "notifBenefit2Title": "Upcoming renewal",
     "notifBenefit2Text": "A reminder before every subscription renewal.",
     "notifBenefit3Title": "Order tracking",
     "notifBenefit3Text": "Get notified as soon as your order ships.",
     "notifEnable": "Turn on notifications",
     "notifEnabling": "Turning on…",
-    "notifLater": "Later"
+    "notifLater": "Later",
+    "codeLabel": "Code"
   },
   "status": {
     "unfulfilled": "To ship",
@@ -581,14 +613,17 @@
         "body": "Your plan sends your cartridges right when they need changing. If you need a break, pause it: nothing ships until you restart it.",
         "plan": "Your plan",
         "price": "Price",
-        "cta": "Pause"
+        "cta": "Pause",
+        "bodyPlan": "Your plan sends you {{items}} {{frequency}}, right when they need changing. If you need a break, pause it: nothing ships until you restart it.",
+        "planValue": "{{items}} / {{period}}"
       },
       "other": {
         "title": "Tell us what's wrong",
         "body": "Our team reads every reply and gets back to you if we can make things right.",
         "label": "Your message",
-        "placeholder": "What's wrong…",
-        "cta": "Send and keep my subscription"
+        "placeholder": "Tell us in a few words",
+        "cta": "Send and keep my subscription",
+        "tooShort": "Please write a few more words (10 characters minimum)."
       },
       "confirm": {
         "title": "Cancel your subscription?",
@@ -749,5 +784,52 @@
       "nameRequired": "Give your filter a name.",
       "done": "Filter added"
     }
+  },
+  "trackingDs": {
+    "title": "Delivery tracking",
+    "orderTitle": "Order {{number}}",
+    "orderRef": "order {{number}}",
+    "historyTitle": "Tracking history",
+    "loading": "Loading tracking…",
+    "unavailableTitle": "Tracking not available yet",
+    "unavailableBody": "The tracking number will appear here as soon as the carrier has picked up your parcel.",
+    "backToOrders": "Back to orders",
+    "trackingNumber": "Tracking number",
+    "stepShipped": "Shipped",
+    "stepOnTheWay": "On the way",
+    "stepDelivered": "Delivered",
+    "latestEvents": "Latest events",
+    "seeAll": "See full history",
+    "allEvents": "All events ({{count}})",
+    "deliveryTo": "Delivering to",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items",
+    "deliveredOn": "Delivered {{date}}",
+    "expectedToday": "Expected today",
+    "expectedTomorrow": "Expected tomorrow, {{date}}",
+    "expectedOn": "Expected {{date}}",
+    "todayAt": "Today, {{time}}",
+    "yesterdayAt": "Yesterday, {{time}}",
+    "status": {
+      "InfoReceived": "Shipped",
+      "InTransit": "On the way",
+      "OutForDelivery": "Out for delivery",
+      "AvailableForPickup": "At pickup point",
+      "Delivered": "Delivered",
+      "Exception": "Delivery issue",
+      "DeliveryFailure": "Delivery failed",
+      "Expired": "Tracking expired",
+      "NotFound": "Being prepared"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet.",
+    "now": "Just now",
+    "minutesAgo_one": "{{count}} min ago",
+    "minutesAgo_other": "{{count}} min ago",
+    "hoursAgo_one": "{{count}} h ago",
+    "hoursAgo_other": "{{count}} h ago",
+    "yesterday": "Yesterday"
   }
 }

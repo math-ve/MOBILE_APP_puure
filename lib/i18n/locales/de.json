@@ -23,8 +23,8 @@
     "title": "Einstellungen",
     "openA11y": "Einstellungen",
     "language": "Sprache",
-    "languageAuto": "Automatisch (Telefonsprache)",
-    "languageAutoHint": "Die App folgt der Sprache deines Telefons: {{language}}",
+    "languageAuto": "Automatisch",
+    "languageAutoHint": "Sprache des Telefons: {{language}}",
     "fr": "Français",
     "en": "English",
     "de": "Deutsch",
@@ -79,7 +79,8 @@
     "trackOrder": "Meine Bestellung verfolgen →",
     "helpTitle": "Ein Problem mit einer Bestellung?",
     "helpSub": "Unser Team antwortet schnell.",
-    "contactSupport": "Support kontaktieren"
+    "contactSupport": "Support kontaktieren",
+    "track": "Bestellung verfolgen"
   },
   "subscription": {
     "sectionHeading": "Mein Abonnement",
@@ -210,7 +211,29 @@
       "preparing": "In Vorbereitung",
       "refunded": "Erstattet",
       "confirmed": "Bestätigt"
-    }
+    },
+    "statusActive": "Aktiv",
+    "statusPaused": "Pausiert",
+    "statusCancelled": "Gekündigt",
+    "price": "Preis",
+    "upcomingFirst": "Nächste Bestellung",
+    "upcomingNext": "Danach",
+    "upcomingCaption": "{{items}}, geliefert {{frequency}}.",
+    "upcomingCaptionPlain": "Lieferung {{frequency}}.",
+    "seeDetail": "Details ansehen",
+    "orderTitle": "Bestellung {{name}}",
+    "productLine": "{{plan}} · Menge {{count}}",
+    "dsFirstName": "Vorname",
+    "dsLastName": "Nachname",
+    "dsAddress": "Adresse",
+    "dsAddress2": "Adresszusatz (optional)",
+    "dsZip": "Postleitzahl",
+    "dsCity": "Stadt",
+    "phAddress2Ds": "Wohnung, Gebäude, Etage",
+    "gotIt": "Verstanden",
+    "missingFieldsShort": "Bitte fülle alle Felder außer dem Adresszusatz aus.",
+    "pausedCardBody": "Keine Lieferungen und keine Abbuchungen mehr. Starte es wieder, wann du willst.",
+    "cancelledCardBody": "Es wird nichts mehr abgebucht."
   },
   "filters": {
     "pageTitle": "Meine Filter",
@@ -427,7 +450,15 @@
       "complaint_/_escalation__repeated_contact": "Wiederholte Kontaktaufnahme",
       "complaint_/_escalation__escalation_request": "Eskalationsanfrage",
       "other__other": "Sonstiges"
-    }
+    },
+    "introDs": "Eine Frage? Füll das Formular aus, wir melden uns per E-Mail.",
+    "emailDs": "Deine E-Mail-Adresse",
+    "categoryDs": "Kategorie",
+    "messageDs": "Deine Nachricht",
+    "messagePlaceholderDs": "Beschreibe dein Anliegen",
+    "writeUs": "Oder schreib uns: ",
+    "needCategory": "Wähle eine Kategorie.",
+    "needEmail": "Gib deine E-Mail-Adresse ein."
   },
   "systems": {
     "heading": "Deine Puure-Systeme",
@@ -440,9 +471,9 @@
     "messagePartial": "Vervollständige deinen Schutz für perfekt gefiltertes Wasser."
   },
   "auth": {
-    "loginTitle": "Anmelden",
-    "loginSubtitle": "Gib deine E-Mail-Adresse ein, um\ndeinen Anmeldecode zu erhalten",
-    "emailPlaceholder": "du@email.com",
+    "loginTitle": "Dein Puure-Bereich",
+    "loginSubtitle": "Deine Filter und deine Bestellungen.",
+    "emailPlaceholder": "Deine E-Mail",
     "emailInvalid": "Ungültige E-Mail-Adresse",
     "sendCode": "Code anfordern",
     "sending": "Wird gesendet...",
@@ -456,21 +487,22 @@
     "verifying": "Wird überprüft...",
     "signIn": "Anmelden",
     "verificationError": "Fehler bei der Überprüfung.",
-    "changeEmail": "← E-Mail-Adresse ändern",
+    "changeEmail": "E-Mail-Adresse ändern",
     "passwordPlaceholder": "Passwort",
     "passwordInvalid": "E-Mail-Adresse oder Passwort falsch",
-    "backToCode": "← Mit einem Code anmelden",
+    "backToCode": "Mit einem Code anmelden",
     "notifTitle": "Verpasse nichts mehr",
-    "notifSubtitle": "Aktiviere Benachrichtigungen, um das Beste aus deinem gefilterten Wasser herauszuholen.",
+    "notifSubtitle": "Aktiviere die Benachrichtigungen, um das Beste aus deinem Filter herauszuholen.",
     "notifBenefit1Title": "Kartuschen-Erinnerung",
-    "notifBenefit1Text": "Wisse genau, wann du deine Kartusche wechseln musst – nicht zu früh, nicht zu spät.",
+    "notifBenefit1Text": "Wisse, wann du deine Kartusche wechseln musst – nicht zu früh, nicht zu spät.",
     "notifBenefit2Title": "Anstehende Verlängerung",
     "notifBenefit2Text": "Eine Erinnerung vor jeder Verlängerung deines Abonnements.",
     "notifBenefit3Title": "Sendungsverfolgung",
     "notifBenefit3Text": "Wir benachrichtigen dich, sobald deine Bestellung versendet wurde.",
     "notifEnable": "Benachrichtigungen aktivieren",
     "notifEnabling": "Wird aktiviert…",
-    "notifLater": "Später"
+    "notifLater": "Später",
+    "codeLabel": "Code"
   },
   "status": {
     "unfulfilled": "Zu versenden",
@@ -581,14 +613,17 @@
         "body": "Dein Abo schickt dir die Kartuschen genau dann, wenn sie gewechselt werden müssen. Wenn du eine Pause brauchst, pausiere es: Nichts wird versendet, bis du es wieder startest.",
         "plan": "Dein Abo",
         "price": "Preis",
-        "cta": "Pausieren"
+        "cta": "Pausieren",
+        "bodyPlan": "Dein Abo schickt dir {{items}} {{frequency}}, genau dann, wenn sie gewechselt werden müssen. Wenn du eine Pause brauchst, pausiere es: Nichts wird versendet, bis du es wieder startest.",
+        "planValue": "{{items}} / {{period}}"
       },
       "other": {
         "title": "Sag uns, was nicht passt",
         "body": "Unser Team liest jede Antwort und meldet sich, wenn wir etwas tun können.",
         "label": "Deine Nachricht",
-        "placeholder": "Was nicht passt…",
-        "cta": "Senden und Abo behalten"
+        "placeholder": "Erzähl es uns in ein paar Worten",
+        "cta": "Senden und Abo behalten",
+        "tooShort": "Schreib bitte noch ein paar Worte (mindestens 10 Zeichen)."
       },
       "confirm": {
         "title": "Abo kündigen?",
@@ -749,5 +784,52 @@
       "nameRequired": "Gib deinem Filter einen Namen.",
       "done": "Filter hinzugefügt"
     }
+  },
+  "trackingDs": {
+    "title": "Sendungsverfolgung",
+    "orderTitle": "Bestellung {{number}}",
+    "orderRef": "Bestellung {{number}}",
+    "historyTitle": "Sendungsverlauf",
+    "loading": "Sendung wird geladen…",
+    "unavailableTitle": "Sendungsverfolgung noch nicht verfügbar",
+    "unavailableBody": "Die Sendungsnummer erscheint hier, sobald der Zusteller dein Paket übernommen hat.",
+    "backToOrders": "Zurück zu den Bestellungen",
+    "trackingNumber": "Sendungsnummer",
+    "stepShipped": "Versendet",
+    "stepOnTheWay": "Unterwegs",
+    "stepDelivered": "Zugestellt",
+    "latestEvents": "Letzte Ereignisse",
+    "seeAll": "Gesamten Verlauf ansehen",
+    "allEvents": "Alle Ereignisse ({{count}})",
+    "deliveryTo": "Lieferung an",
+    "items_one": "{{count}} Artikel",
+    "items_other": "{{count}} Artikel",
+    "deliveredOn": "Zugestellt am {{date}}",
+    "expectedToday": "Zustellung heute erwartet",
+    "expectedTomorrow": "Zustellung morgen erwartet, {{date}}",
+    "expectedOn": "Zustellung erwartet am {{date}}",
+    "todayAt": "Heute, {{time}}",
+    "yesterdayAt": "Gestern, {{time}}",
+    "status": {
+      "InfoReceived": "Versendet",
+      "InTransit": "Unterwegs",
+      "OutForDelivery": "In Zustellung",
+      "AvailableForPickup": "Im Paketshop",
+      "Delivered": "Zugestellt",
+      "Exception": "Zustellproblem",
+      "DeliveryFailure": "Zustellung fehlgeschlagen",
+      "Expired": "Verfolgung abgelaufen",
+      "NotFound": "In Vorbereitung"
+    }
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "empty": "Noch keine Benachrichtigungen.",
+    "now": "Gerade eben",
+    "minutesAgo_one": "Vor {{count}} Min.",
+    "minutesAgo_other": "Vor {{count}} Min.",
+    "hoursAgo_one": "Vor {{count}} Std.",
+    "hoursAgo_other": "Vor {{count}} Std.",
+    "yesterday": "Gestern"
   }
 }

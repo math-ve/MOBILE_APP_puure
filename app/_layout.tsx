@@ -208,7 +208,7 @@ export default function RootLayout() {
         <Stack.Screen name="settings" />
         <Stack.Screen name="cancel-subscription" />
         <Stack.Screen name="filter-help" />
-        <Stack.Screen name="parcel-problem" />
+        <Stack.Screen name="tracking-history" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="add-filter" />
         {/* Écran de fin : pas de retour par glissement vers une étape terminée. */}

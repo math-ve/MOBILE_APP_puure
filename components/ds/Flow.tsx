@@ -1,5 +1,5 @@
-import { ReactNode } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ReactElement, ReactNode } from 'react'
+import { Pressable, RefreshControlProps, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import { ds, typography } from '../../lib/theme'
@@ -30,9 +30,13 @@ type FlowScreenProps = {
   actions?: ReactNode
   /** Centre verticalement le contenu (écrans d'offre et de résultat). */
   centered?: boolean
+  /** Espace réservé sous le contenu (barre d'onglets posée par-dessus). */
+  bottomSpace?: number
+  /** Tirer pour rafraîchir. */
+  refreshControl?: ReactElement<RefreshControlProps>
 }
 
-export function FlowScreen({ title, onBack, children, actions, centered }: FlowScreenProps) {
+export function FlowScreen({ title, onBack, children, actions, centered, bottomSpace, refreshControl }: FlowScreenProps) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   return (
@@ -48,7 +52,8 @@ export function FlowScreen({ title, onBack, children, actions, centered }: FlowS
       </View>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, centered && styles.centered]}
+        contentContainerStyle={[styles.content, centered && styles.centered, bottomSpace != null && { paddingBottom: bottomSpace }]}
+        refreshControl={refreshControl}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -61,12 +66,23 @@ export function FlowScreen({ title, onBack, children, actions, centered }: FlowS
 
 // ─── Haut d'écran : pictogramme + titre + texte ─────────────────
 
-export function Hero({ glyph, tone = 'blue', title, body }: { glyph: GlyphName; tone?: Tone; title: string; body?: string }) {
+type HeroProps = {
+  glyph: GlyphName
+  tone?: Tone
+  title: string
+  body?: string
+  /** Pastille ronde (écrans de résultat P41, P42) plutôt que carré arrondi (offres P28 → P38). */
+  round?: boolean
+  /** Pastille pleine, pictogramme blanc (P35). */
+  solid?: boolean
+}
+
+export function Hero({ glyph, tone = 'blue', title, body, round, solid }: HeroProps) {
   const c = TONES[tone]
   return (
     <View style={styles.hero}>
-      <View style={[styles.heroIcon, { backgroundColor: c.bg }]}>
-        <Glyph name={glyph} size={32} color={c.fg} />
+      <View style={[styles.heroIcon, { backgroundColor: solid ? c.fg : c.bg }, round && { borderRadius: 36 }]}>
+        <Glyph name={glyph} size={32} color={solid ? '#FFFFFF' : c.fg} />
       </View>
       <Text style={styles.heroTitle} accessibilityRole="header">{title}</Text>
       {body ? <Text style={styles.heroBody}>{body}</Text> : null}

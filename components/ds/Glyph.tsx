@@ -6,6 +6,7 @@ import { ds } from '../../lib/theme'
 export type GlyphName =
   | 'back' | 'check' | 'pause' | 'play' | 'card' | 'camera' | 'image' | 'alert'
   | 'box' | 'calendar' | 'mail' | 'chevron' | 'close' | 'home' | 'drop' | 'alertCircle'
+  | 'faucet' | 'tag'
 
 type Props = { name: GlyphName; size?: number; color?: string }
 
@@ -17,7 +18,7 @@ export default function Glyph({ name, size = 22, color = ds.ink }: Props) {
       {name === 'chevron' && <Path d="M9 5l7 7-7 7" {...p} />}
       {name === 'check' && <Path d="M5 12.5l4.5 4.5L19 7.5" {...p} />}
       {name === 'close' && <Path d="M6 6l12 12M18 6L6 18" {...p} />}
-      {name === 'pause' && <><Path d="M9 6v12M15 6v12" {...p} /></>}
+      {name === 'pause' && <><Circle cx={12} cy={12} r={9} {...p} /><Path d="M10 9v6M14 9v6" {...p} /></>}
       {name === 'play' && <Path d="M8 5.5v13l10-6.5-10-6.5z" {...p} />}
       {name === 'card' && <><Rect x={3} y={5.5} width={18} height={13} rx={2.5} {...p} /><Path d="M3 10h18M7 15h3" {...p} /></>}
       {name === 'camera' && <><Path d="M4 8.5A1.5 1.5 0 015.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0120 8.5V17a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 17V8.5z" {...p} /><Circle cx={12} cy={12.5} r={3.2} {...p} /></>}
@@ -28,6 +29,8 @@ export default function Glyph({ name, size = 22, color = ds.ink }: Props) {
       {name === 'mail' && <><Rect x={3.5} y={5.5} width={17} height={13} rx={2.5} {...p} /><Path d="M4 7l8 6 8-6" {...p} /></>}
       {name === 'home' && <Path d="M4 11l8-6.5 8 6.5V19a1 1 0 01-1 1h-4.5v-5h-5v5H5a1 1 0 01-1-1v-8z" {...p} />}
       {name === 'alertCircle' && <><Circle cx={12} cy={12} r={9} {...p} /><Path d="M12 8v5M12 16.5v.01" {...p} /></>}
+      {name === 'faucet' && <><Path d="M5 7h8a4 4 0 014 4v2" {...p} /><Path d="M5 7v4" {...p} /><Path d="M16 17v.01M18 19v.01M16 20.5v.01" {...p} /></>}
+      {name === 'tag' && <><Path d="M3.5 12.6V4.5a1 1 0 011-1h8.1a1 1 0 01.7.3l7.4 7.4a1 1 0 010 1.4l-8.1 8.1a1 1 0 01-1.4 0l-7.4-7.4a1 1 0 01-.3-.7z" {...p} /><Circle cx={8.2} cy={8.2} r={1.4} {...p} /></>}
       {name === 'drop' && <Path d="M12 2.7s-6 6.6-6 11.3a6 6 0 0 0 12 0c0-4.7-6-11.3-6-11.3z" {...p} />}
     </Svg>
   )

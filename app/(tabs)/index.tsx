@@ -261,7 +261,7 @@ export default function WaterScreen() {
       {sheet === 'replace' && current && userId && (
         <Sheet
           title={t('water:replace.title')}
-          subtitle={t('water:replace.body', { name: current.product_name })}
+          message={t('water:replace.body', { name: current.product_name })}
           onClose={() => setSheet(null)}
           footer={
             <View style={styles.footerRow}>
@@ -281,7 +281,7 @@ export default function WaterScreen() {
       {sheet === 'options' && current && (
         <Sheet
           title={current.product_name}
-          subtitle={t('water:menu.body')}
+          message={t('water:menu.body')}
           onClose={() => setSheet(null)}
           footer={<>
             <PillButton
@@ -300,7 +300,7 @@ export default function WaterScreen() {
       {sheet === 'delete' && current && (
         <Sheet
           title={t('water:delete.title')}
-          subtitle={t('water:delete.body', { name: current.product_name })}
+          message={t('water:delete.body', { name: current.product_name })}
           onClose={() => setSheet(null)}
           footer={
             <View style={styles.footerRow}>

@@ -21,6 +21,8 @@ export type SupportTicket = {
   context?: Record<string, string | null | undefined>
   /** Écran d'origine, pour les analytics. */
   source: string
+  /** Adresse de réponse saisie par le client (sinon celle du compte). */
+  email?: string
 }
 
 async function currentEmail(): Promise<string | null> {
@@ -30,7 +32,7 @@ async function currentEmail(): Promise<string | null> {
 
 /** Envoie le ticket. Renvoie l'e-mail auquel le support répondra. */
 export async function sendSupportTicket(ticket: SupportTicket): Promise<string> {
-  const email = await currentEmail()
+  const email = ticket.email?.trim() || await currentEmail()
   if (!email) throw new Error('session')
 
   const frSub = (i18n.getResource('fr', 'support', 'sub') as Record<string, string> | undefined)?.[ticket.category] ?? ticket.category

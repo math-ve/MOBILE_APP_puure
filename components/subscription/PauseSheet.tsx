@@ -31,7 +31,7 @@ export default function PauseSheet({ contractId, source, onClose, onPaused }: Pr
   return (
     <Sheet
       title={t('care:pause.title')}
-      subtitle={t('care:pause.body')}
+      message={t('care:pause.body')}
       onClose={onClose}
       footer={<>
         {error ? <Text style={styles.error}>{error}</Text> : null}

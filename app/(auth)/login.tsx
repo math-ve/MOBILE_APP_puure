@@ -1,20 +1,28 @@
 import { useState, useRef } from 'react'
 import {
-  View, Text, TextInput, TouchableOpacity, Pressable, StyleSheet,
-  Platform, Dimensions, ScrollView, KeyboardAvoidingView,
+  View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Svg, { Path, Rect } from 'react-native-svg'
 import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
 import { track } from '../../lib/analytics'
 import Logo from '../../components/ui/Logo'
+import PillButton from '../../components/ds/PillButton'
+import Glyph from '../../components/ds/Glyph'
+import { FieldLabel } from '../../components/ds/Field'
+import { ds, typography } from '../../lib/theme'
 import { NOTIF_INTRO_SEEN_KEY } from './notifications-intro'
 
-const { height } = Dimensions.get('window')
+// Connexion (maquettes P01, P02) : vidéo plein écran sous un fondu blanc,
+// e-mail → code à 6 chiffres.
+
+/** Logo de 26 px de haut (ratio du viewBox 341,1 × 96,8). */
+const LOGO_WIDTH = 26 * 341.1 / 96.8
 
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bHFkcnJsZ2dvbGdkc3Nkd29oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2ODkyNjIsImV4cCI6MjA5NTI2NTI2Mn0.859w5rLfcdZWG_vhk0tQM0cqcwRluIFlHjLIsM3Sr5o'
@@ -29,13 +37,26 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const otpRefs = useRef<any[]>([])
+  const [focused, setFocused] = useState<number | null>(null)
 
   const player = useVideoPlayer(
     require('../../assets/videos/Purificateur_Inox_SequenceFixe_HomePage_Telephone_WEB_HD.mp4'),
     (p) => { p.loop = true; p.muted = true; p.play() }
   )
 
-  const handleOtpChange = (val: string, index: number) => {
+  const handleOtpChange = (raw: string, index: number) => {
+    // Code collé ou proposé par le clavier (« Depuis Mail ») : réparti sur les cases.
+    const digits = raw.replace(/\D/g, '')
+    // Un chiffre tapé derrière celui déjà présent n'est pas un collage.
+    const typedAfter = digits.length === 2 && !!otpValues[index] && digits.startsWith(otpValues[index])
+    if (digits.length > 1 && !typedAfter) {
+      const filled = [...otpValues]
+      digits.slice(0, 6 - index).split('').forEach((d, k) => { filled[index + k] = d })
+      setOtpValues(filled)
+      otpRefs.current[Math.min(index + digits.length, 5)]?.focus()
+      return
+    }
+    const val = digits.slice(-1)
     const newValues = [...otpValues]
     newValues[index] = val
     setOtpValues(newValues)
@@ -107,112 +128,101 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.root}>
-      {/* VIDEO */}
-      <VideoView
-        player={player}
-        style={StyleSheet.absoluteFillObject}
-        contentFit="cover"
-        nativeControls={false}
-      />
+      {step !== 'otp' && (
+        <>
+          <VideoView player={player} style={StyleSheet.absoluteFillObject} contentFit="cover" nativeControls={false} />
+          <LinearGradient
+            colors={['#FFFFFF', 'rgba(255,255,255,0.92)', 'rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+            locations={[0, 0.45, 0.7, 1]}
+            style={styles.fade}
+            pointerEvents="none"
+          />
+        </>
+      )}
 
-      {/* GRADIENTS */}
-      <LinearGradient
-        colors={['rgba(8,21,61,0.3)', 'transparent']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.85)']}
-        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: height * 0.65 }}
-      />
-
-      {/* KEYBOARD AVOIDING — technique correcte iOS */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={0}
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
-          keyboardShouldPersistTaps="handled"
-          scrollEnabled={false}
-          bounces={false}
-        >
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 32 }]}>
-
-            {/* Inner highlight — réflexion lumineuse sur le verre */}
-            <LinearGradient
-              colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-              style={styles.innerHighlight}
-              pointerEvents="none"
-            />
-
-            {/* Drag handle */}
-            <View style={styles.handle} />
-
-            {/* Logo */}
-            <Pressable
-              style={styles.logoRow}
-              onLongPress={() => { setStep('password'); setError('') }}
-              delayLongPress={1500}
-            >
-              <Logo width={132} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {step === 'otp' ? (
+          <View style={[styles.page, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
+            <Pressable onPress={backToEmail} style={styles.backCircle} accessibilityRole="button" accessibilityLabel={t('common:back')} hitSlop={6}>
+              <Glyph name="back" size={20} color={ds.ink} />
             </Pressable>
-
-            {step === 'email' ? (
-              <>
-                <Text style={styles.title}>{t('auth:loginTitle')}</Text>
+            <View style={{ gap: 10 }}>
+              <Text style={styles.title} accessibilityRole="header">{t('auth:verifyTitle')}</Text>
+              <Text style={styles.codeSent}>
+                {t('auth:codeSentTo')} <Text style={styles.codeEmail}>{email.trim()}</Text>
+              </Text>
+            </View>
+            <View style={{ gap: 20 }}>
+              <FieldLabel>{t('auth:codeLabel')}</FieldLabel>
+              <View style={styles.otpRow}>
+                {otpValues.map((val, i) => (
+                  <TextInput
+                    key={i}
+                    ref={(r) => { otpRefs.current[i] = r }}
+                    style={[styles.otpBox, focused === i && styles.otpBoxFocused]}
+                    value={val}
+                    onChangeText={(v) => handleOtpChange(v, i)}
+                    onFocus={() => setFocused(i)}
+                    onBlur={() => setFocused((f) => (f === i ? null : f))}
+                    onKeyPress={({ nativeEvent }) => {
+                      if (nativeEvent.key === 'Backspace' && !val && i > 0) otpRefs.current[i - 1]?.focus()
+                    }}
+                    keyboardType="number-pad"
+                    textContentType="oneTimeCode"
+                    autoComplete={i === 0 ? 'sms-otp' : 'off'}
+                    autoFocus={i === 0}
+                    keyboardAppearance="light"
+                    maxLength={i === 0 ? 6 : 1}
+                    selectTextOnFocus
+                    accessibilityLabel={`${t('auth:codeLabel')} ${i + 1}`}
+                  />
+                ))}
+              </View>
+            </View>
+            <View style={{ flex: 1 }} />
+            <View style={{ gap: 6 }}>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              <PillButton label={t('auth:signIn')} loading={loading} onPress={handleVerifyCode} />
+              <PillButton variant="quiet" label={t('auth:changeEmail')} onPress={backToEmail} />
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.page, styles.overVideo, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}>
+            <View style={{ gap: 14 }}>
+              {/* Appui long sur le logo : connexion par mot de passe (compte de démo App Review). */}
+              <Pressable onLongPress={() => { setStep('password'); setError('') }} delayLongPress={1500} style={{ alignSelf: 'flex-start' }}>
+                <Logo width={LOGO_WIDTH} />
+              </Pressable>
+              <View style={{ gap: 8 }}>
+                <Text style={styles.title} accessibilityRole="header">{t('auth:loginTitle')}</Text>
                 <Text style={styles.subtitle}>{t('auth:loginSubtitle')}</Text>
+              </View>
+            </View>
 
-                <TextInput
-                  style={styles.input}
-                  placeholder={t('auth:emailPlaceholder')}
-                  placeholderTextColor="rgba(35,48,86,0.35)"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  keyboardAppearance="light"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="send"
-                  onSubmitEditing={handleSendCode}
-                />
+            <View style={{ flex: 1 }} />
 
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-
-                <TouchableOpacity
-                  style={[styles.btnLime, loading && { opacity: 0.7 }]}
-                  onPress={handleSendCode}
-                  disabled={loading}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.btnLimeText}>
-                    {loading ? t('auth:sending') : t('auth:sendCode')}
-                  </Text>
-                </TouchableOpacity>
-
-                <Text style={styles.footer}>{t('auth:securedAccess')}</Text>
-              </>
-            ) : step === 'password' ? (
-              <>
-                <Text style={styles.title}>{t('auth:loginTitle')}</Text>
-
-                <TextInput
-                  style={styles.input}
-                  placeholder={t('auth:emailPlaceholder')}
-                  placeholderTextColor="rgba(35,48,86,0.35)"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  keyboardAppearance="light"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="username"
-                />
-
+            <View style={{ gap: 12 }}>
+              <TextInput
+                style={styles.input}
+                placeholder={t('auth:emailPlaceholder')}
+                placeholderTextColor={ds.muted}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                keyboardAppearance="light"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType={step === 'password' ? 'username' : 'emailAddress'}
+                returnKeyType={step === 'password' ? 'next' : 'send'}
+                onSubmitEditing={step === 'password' ? undefined : handleSendCode}
+                accessibilityLabel={t('auth:emailPlaceholder')}
+              />
+              {step === 'password' && (
                 <TextInput
                   style={styles.input}
                   placeholder={t('auth:passwordPlaceholder')}
-                  placeholderTextColor="rgba(35,48,86,0.35)"
+                  placeholderTextColor={ds.muted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -223,195 +233,57 @@ export default function LoginScreen() {
                   returnKeyType="go"
                   onSubmitEditing={handlePasswordLogin}
                 />
-
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-
-                <TouchableOpacity
-                  style={[styles.btnLime, loading && { opacity: 0.7 }]}
-                  onPress={handlePasswordLogin}
-                  disabled={loading}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.btnLimeText}>
-                    {loading ? t('auth:verifying') : t('auth:signIn')}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={backToEmail} style={{ marginTop: 12, alignItems: 'center' }}>
-                  <Text style={styles.backLink}>{t('auth:backToCode')}</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={styles.title}>{t('auth:verifyTitle')}</Text>
-                <Text style={styles.subtitle}>
-                  {t('auth:codeSentTo')}
-                  <Text style={{ color: '#2764FF' }}>{email}</Text>
-                </Text>
-
-                <View style={styles.otpRow}>
-                  {otpValues.map((val, i) => (
-                    <TextInput
-                      key={i}
-                      ref={(r) => { otpRefs.current[i] = r }}
-                      style={[styles.otpBox, val ? styles.otpBoxFilled : null]}
-                      value={val}
-                      onChangeText={(v) => handleOtpChange(v.slice(-1), i)}
-                      keyboardType="number-pad"
-                      keyboardAppearance="light"
-                      maxLength={1}
-                      selectTextOnFocus
-                    />
-                  ))}
-                </View>
-
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-
-                <TouchableOpacity
-                  style={[styles.btnLime, loading && { opacity: 0.7 }]}
-                  onPress={handleVerifyCode}
-                  disabled={loading}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.btnLimeText}>
-                    {loading ? t('auth:verifying') : t('auth:signIn')}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={backToEmail}
-                  style={{ marginTop: 12, alignItems: 'center' }}
-                >
-                  <Text style={styles.backLink}>{t('auth:changeEmail')}</Text>
-                </TouchableOpacity>
-              </>
-            )}
+              )}
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {step === 'password' ? (
+                <>
+                  <PillButton label={t('auth:signIn')} loading={loading} onPress={handlePasswordLogin} />
+                  <PillButton variant="quiet" label={t('auth:backToCode')} onPress={backToEmail} />
+                </>
+              ) : (
+                <>
+                  <PillButton label={t('auth:sendCode')} loading={loading} onPress={handleSendCode} />
+                  <View style={styles.secure}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                      <Rect x={4} y={11} width={16} height={10} rx={3} stroke={ds.blue} strokeWidth={1.8} />
+                      <Path d="M8 11V7a4 4 0 0 1 8 0v4" stroke={ds.blue} strokeWidth={1.8} strokeLinecap="round" />
+                    </Svg>
+                    <Text style={styles.secureText}>{t('auth:securedAccess')}</Text>
+                  </View>
+                </>
+              )}
+            </View>
           </View>
-        </ScrollView>
+        )}
       </KeyboardAvoidingView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#08153d',
-  },
-  sheet: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.9)',
-    borderLeftColor: 'rgba(255,255,255,0.4)',
-    borderRightColor: 'rgba(255,255,255,0.4)',
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    shadowColor: '#233056',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 32,
-  },
-  innerHighlight: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: 80,
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: 'rgba(35,48,86,0.2)',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 24,
-  },
-  logoRow: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#233056',
-    letterSpacing: -0.5,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: 'rgba(35,48,86,0.6)',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
+  root: { flex: 1, backgroundColor: '#FFFFFF' },
+  fade: { position: 'absolute', left: 0, right: 0, top: 0, height: 300 },
+  page: { flex: 1, paddingHorizontal: 24, gap: 28 },
+  overVideo: { paddingHorizontal: 20, gap: 0 },
+  title: { fontFamily: typography.fontFamily.medium, fontSize: 38, lineHeight: 43, letterSpacing: -0.76, color: ds.ink },
+  subtitle: { fontFamily: typography.fontFamily.regular, fontSize: 17, lineHeight: 25, color: ds.body },
   input: {
-    height: 54,
-    backgroundColor: 'rgba(35,48,86,0.06)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(35,48,86,0.12)',
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#233056',
-    marginBottom: 12,
+    height: 54, paddingHorizontal: 22, borderRadius: 999, borderWidth: 1, borderColor: ds.line,
+    backgroundColor: '#FFFFFF', fontFamily: typography.fontFamily.regular, fontSize: 16, color: ds.ink,
   },
-  btnLime: {
-    height: 56,
-    backgroundColor: '#2764FF',
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-    marginBottom: 16,
+  secure: {
+    alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#FFFFFF',
   },
-  btnLimeText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: -0.3,
-  },
-  footer: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: 'rgba(35,48,86,0.45)',
-    marginBottom: 8,
-  },
-  error: {
-    color: '#e32c2b',
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  otpRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-    justifyContent: 'center',
-  },
+  secureText: { fontFamily: typography.fontFamily.regular, fontSize: 13, color: ds.ink },
+  error: { fontFamily: typography.fontFamily.regular, fontSize: 14, color: ds.red, textAlign: 'center' },
+  backCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: ds.line, alignItems: 'center', justifyContent: 'center' },
+  codeSent: { fontFamily: typography.fontFamily.regular, fontSize: 15, lineHeight: 22, color: ds.body },
+  codeEmail: { fontFamily: typography.fontFamily.medium, color: ds.ink },
+  otpRow: { flexDirection: 'row', gap: 8 },
   otpBox: {
-    width: 46,
-    height: 56,
-    backgroundColor: 'rgba(35,48,86,0.06)',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(35,48,86,0.12)',
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#233056',
+    flex: 1, minWidth: 0, height: 60, borderRadius: 16, borderWidth: 1, borderColor: ds.line, backgroundColor: ds.surface,
+    textAlign: 'center', fontFamily: typography.fontFamily.medium, fontSize: 24, color: ds.ink,
   },
-  otpBoxFilled: {
-    borderColor: '#2764FF',
-    backgroundColor: 'rgba(39,100,255,0.06)',
-  },
-  backLink: {
-    color: 'rgba(35,48,86,0.55)',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+  otpBoxFocused: { borderWidth: 2, borderColor: ds.blue, backgroundColor: '#FFFFFF' },
 })

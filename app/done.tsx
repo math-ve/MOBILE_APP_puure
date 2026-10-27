@@ -15,13 +15,13 @@ import { track } from '../lib/analytics'
 
 type Kind = 'paused' | 'cancelled' | 'link' | 'linkAlready' | 'sent' | 'sentKeep' | 'moved' | 'discount'
 
-const HERO: Record<Kind, { glyph: GlyphName; tone: 'blue' | 'neutral' }> = {
+const HERO: Record<Kind, { glyph: GlyphName; tone: 'blue' | 'neutral'; solid?: boolean }> = {
   paused: { glyph: 'pause', tone: 'blue' },
-  cancelled: { glyph: 'check', tone: 'neutral' },
+  cancelled: { glyph: 'check', tone: 'blue' },
   link: { glyph: 'mail', tone: 'blue' },
   linkAlready: { glyph: 'mail', tone: 'blue' },
-  sent: { glyph: 'check', tone: 'blue' },
-  sentKeep: { glyph: 'check', tone: 'blue' },
+  sent: { glyph: 'check', tone: 'blue', solid: true },
+  sentKeep: { glyph: 'check', tone: 'blue', solid: true },
   moved: { glyph: 'calendar', tone: 'blue' },
   discount: { glyph: 'check', tone: 'blue' },
 }
@@ -96,7 +96,7 @@ export default function DoneScreen() {
 
   return (
     <FlowScreen centered actions={actions}>
-      <Hero glyph={HERO[kind].glyph} tone={HERO[kind].tone} title={text[kind].title} body={text[kind].body} />
+      <Hero round solid={HERO[kind].solid} glyph={HERO[kind].glyph} tone={HERO[kind].tone} title={text[kind].title} body={text[kind].body} />
     </FlowScreen>
   )
 }

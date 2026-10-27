@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import { ds, typography } from '../../lib/theme'
+import Glyph, { GlyphName } from './Glyph'
 
 // Feuille du bas du Puure DS : fond assombri, coins 28 px, poignée,
 // titre centré + sous-titre, contenu défilant si besoin, actions en bas.
@@ -12,15 +13,19 @@ import { ds, typography } from '../../lib/theme'
 type Props = {
   title: string
   subtitle?: string
+  /** Paragraphe d'explication, plus lisible qu'un sous-titre (P22, P26, P40). */
+  message?: string
   /** Mise en garde sous le sous-titre (ex. cartouche saturée). */
   note?: string
   onClose: () => void
   children?: ReactNode
   /** Boutons du bas (restent visibles quand le contenu défile). */
   footer?: ReactNode
+  /** Pictogramme rond au-dessus du titre (maquette P26). */
+  icon?: GlyphName
 }
 
-export default function Sheet({ title, subtitle, note, onClose, children, footer }: Props) {
+export default function Sheet({ title, subtitle, message, note, onClose, children, footer, icon }: Props) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const slide = useRef(new Animated.Value(700)).current
@@ -46,8 +51,10 @@ export default function Sheet({ title, subtitle, note, onClose, children, footer
         >
           <View style={styles.handle} />
           <View style={styles.head}>
+            {icon ? <View style={styles.icon}><Glyph name={icon} size={26} color={ds.blue} /></View> : null}
             <Text style={styles.title} accessibilityRole="header">{title}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+            {message ? <Text style={styles.message}>{message}</Text> : null}
             {note ? <Text style={styles.note}>{note}</Text> : null}
           </View>
           {children ? (
@@ -76,8 +83,10 @@ const styles = StyleSheet.create({
   },
   handle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 999, backgroundColor: ds.line },
   head: { gap: 6, alignItems: 'center' },
+  icon: { width: 64, height: 64, borderRadius: 32, backgroundColor: ds.blueSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   title: { fontFamily: typography.fontFamily.medium, fontSize: 20, lineHeight: 25, color: ds.ink, textAlign: 'center' },
   subtitle: { fontFamily: typography.fontFamily.regular, fontSize: 14, lineHeight: 20, color: ds.muted, textAlign: 'center' },
+  message: { fontFamily: typography.fontFamily.regular, fontSize: 16, lineHeight: 24, color: ds.body, textAlign: 'center', marginTop: 4 },
   note: { fontFamily: typography.fontFamily.regular, fontSize: 13, lineHeight: 19, color: ds.muted, textAlign: 'center' },
   body: { flexGrow: 0 },
   footer: { gap: 4 },

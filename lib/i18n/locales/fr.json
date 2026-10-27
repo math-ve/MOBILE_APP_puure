@@ -23,8 +23,8 @@
     "title": "Réglages",
     "openA11y": "Réglages",
     "language": "Langue",
-    "languageAuto": "Automatique (langue du téléphone)",
-    "languageAutoHint": "L'app suit la langue de votre téléphone : {{language}}",
+    "languageAuto": "Automatique",
+    "languageAutoHint": "Langue du téléphone : {{language}}",
     "fr": "Français",
     "en": "English",
     "de": "Deutsch",
@@ -79,7 +79,8 @@
     "trackOrder": "Suivre ma commande →",
     "helpTitle": "Un souci avec une commande ?",
     "helpSub": "Notre équipe vous répond rapidement.",
-    "contactSupport": "Contacter le support"
+    "contactSupport": "Contacter le support",
+    "track": "Suivre ma commande"
   },
   "subscription": {
     "sectionHeading": "Mon abonnement",
@@ -210,7 +211,29 @@
       "preparing": "En préparation",
       "refunded": "Remboursée",
       "confirmed": "Confirmée"
-    }
+    },
+    "statusActive": "Actif",
+    "statusPaused": "En pause",
+    "statusCancelled": "Annulé",
+    "price": "Prix",
+    "upcomingFirst": "Prochaine commande",
+    "upcomingNext": "Suivante",
+    "upcomingCaption": "{{items}} livrées {{frequency}}.",
+    "upcomingCaptionPlain": "Livraison {{frequency}}.",
+    "seeDetail": "Voir le détail",
+    "orderTitle": "Commande {{name}}",
+    "productLine": "{{plan}} · quantité {{count}}",
+    "dsFirstName": "Prénom",
+    "dsLastName": "Nom",
+    "dsAddress": "Adresse",
+    "dsAddress2": "Complément (facultatif)",
+    "dsZip": "Code postal",
+    "dsCity": "Ville",
+    "phAddress2Ds": "Appartement, bâtiment, étage",
+    "gotIt": "J'ai compris",
+    "missingFieldsShort": "Merci de remplir tous les champs, sauf le complément.",
+    "pausedCardBody": "Plus aucune livraison ni aucun prélèvement. Relancez-le quand vous voulez.",
+    "cancelledCardBody": "Vous ne serez plus prélevé."
   },
   "filters": {
     "pageTitle": "Mes filtres",
@@ -427,7 +450,15 @@
       "complaint_/_escalation__repeated_contact": "Contacts répétés",
       "complaint_/_escalation__escalation_request": "Demande d'escalade",
       "other__other": "Autre"
-    }
+    },
+    "introDs": "Une question ? Remplissez le formulaire, nous revenons vers vous par e-mail.",
+    "emailDs": "Votre adresse e-mail",
+    "categoryDs": "Catégorie",
+    "messageDs": "Votre message",
+    "messagePlaceholderDs": "Décrivez votre demande",
+    "writeUs": "Ou écrivez-nous : ",
+    "needCategory": "Choisissez une catégorie.",
+    "needEmail": "Indiquez votre adresse e-mail."
   },
   "systems": {
     "heading": "Vos systèmes Puure",
@@ -440,10 +471,10 @@
     "messagePartial": "Complétez votre protection pour une eau parfaitement filtrée."
   },
   "auth": {
-    "loginTitle": "Connexion",
-    "loginSubtitle": "Entrez votre email pour recevoir\nvotre code de connexion",
-    "emailPlaceholder": "votre@email.com",
-    "emailInvalid": "Email invalide",
+    "loginTitle": "Votre espace Puure",
+    "loginSubtitle": "Vos filtres et vos commandes.",
+    "emailPlaceholder": "Votre e-mail",
+    "emailInvalid": "Adresse e-mail invalide",
     "sendCode": "Recevoir le code",
     "sending": "Envoi en cours...",
     "serverUnreachable": "Impossible de contacter le serveur.",
@@ -456,21 +487,22 @@
     "verifying": "Vérification...",
     "signIn": "Se connecter",
     "verificationError": "Erreur de vérification.",
-    "changeEmail": "← Changer d'adresse email",
+    "changeEmail": "Changer d'adresse e-mail",
     "passwordPlaceholder": "Mot de passe",
     "passwordInvalid": "Email ou mot de passe incorrect",
-    "backToCode": "← Se connecter avec un code",
+    "backToCode": "Se connecter avec un code",
     "notifTitle": "Ne manquez plus rien",
-    "notifSubtitle": "Activez les notifications pour tirer le meilleur de votre eau filtrée.",
+    "notifSubtitle": "Activez les notifications pour tirer le meilleur de votre filtre.",
     "notifBenefit1Title": "Rappel de cartouche",
-    "notifBenefit1Text": "Sachez exactement quand remplacer votre cartouche, ni trop tôt ni trop tard.",
+    "notifBenefit1Text": "Sachez quand remplacer votre cartouche, ni trop tôt ni trop tard.",
     "notifBenefit2Title": "Renouvellement à venir",
     "notifBenefit2Text": "Un rappel avant chaque renouvellement de votre abonnement.",
     "notifBenefit3Title": "Suivi de commande",
     "notifBenefit3Text": "Soyez prévenu dès que votre commande est expédiée.",
     "notifEnable": "Activer les notifications",
     "notifEnabling": "Activation…",
-    "notifLater": "Plus tard"
+    "notifLater": "Plus tard",
+    "codeLabel": "Code"
   },
   "status": {
     "unfulfilled": "À expédier",
@@ -581,14 +613,17 @@
         "body": "Votre formule vous envoie vos cartouches au moment où il faut les changer. Si vous voulez souffler, mettez-la en pause : rien ne part tant que vous ne la relancez pas.",
         "plan": "Votre formule",
         "price": "Prix",
-        "cta": "Mettre en pause"
+        "cta": "Mettre en pause",
+        "bodyPlan": "Votre formule vous envoie {{items}} {{frequency}}, au moment où il faut les changer. Si vous voulez souffler, mettez-la en pause : rien ne part tant que vous ne la relancez pas.",
+        "planValue": "{{items}} / {{period}}"
       },
       "other": {
         "title": "Dites-nous ce qui ne va pas",
         "body": "Notre équipe lit chaque réponse et revient vers vous si on peut arranger les choses.",
         "label": "Votre message",
-        "placeholder": "Ce qui ne va pas…",
-        "cta": "Envoyer et garder mon abonnement"
+        "placeholder": "Expliquez-nous en quelques mots",
+        "cta": "Envoyer et garder mon abonnement",
+        "tooShort": "Écrivez quelques mots de plus (10 caractères minimum)."
       },
       "confirm": {
         "title": "Annuler l'abonnement ?",
@@ -749,5 +784,52 @@
       "nameRequired": "Donnez un nom à votre filtre.",
       "done": "Filtre ajouté"
     }
+  },
+  "trackingDs": {
+    "title": "Suivi de livraison",
+    "orderTitle": "Commande {{number}}",
+    "orderRef": "commande {{number}}",
+    "historyTitle": "Historique du suivi",
+    "loading": "Chargement du suivi…",
+    "unavailableTitle": "Suivi pas encore disponible",
+    "unavailableBody": "Le numéro de suivi apparaîtra ici dès que le transporteur aura pris en charge votre colis.",
+    "backToOrders": "Retour aux commandes",
+    "trackingNumber": "Numéro de suivi",
+    "stepShipped": "Expédiée",
+    "stepOnTheWay": "En route",
+    "stepDelivered": "Livrée",
+    "latestEvents": "Derniers événements",
+    "seeAll": "Voir tout l'historique",
+    "allEvents": "Tous les événements ({{count}})",
+    "deliveryTo": "Livraison à",
+    "items_one": "{{count}} article",
+    "items_other": "{{count}} articles",
+    "deliveredOn": "Livrée {{date}}",
+    "expectedToday": "Livraison prévue aujourd'hui",
+    "expectedTomorrow": "Livraison prévue demain, {{date}}",
+    "expectedOn": "Livraison prévue {{date}}",
+    "todayAt": "Aujourd'hui, {{time}}",
+    "yesterdayAt": "Hier, {{time}}",
+    "status": {
+      "InfoReceived": "Expédiée",
+      "InTransit": "En route",
+      "OutForDelivery": "En cours de livraison",
+      "AvailableForPickup": "Au point relais",
+      "Delivered": "Livrée",
+      "Exception": "Incident de livraison",
+      "DeliveryFailure": "Échec de livraison",
+      "Expired": "Suivi expiré",
+      "NotFound": "En préparation"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification pour le moment.",
+    "now": "À l'instant",
+    "minutesAgo_one": "Il y a {{count}} min",
+    "minutesAgo_other": "Il y a {{count}} min",
+    "hoursAgo_one": "Il y a {{count}} h",
+    "hoursAgo_other": "Il y a {{count}} h",
+    "yesterday": "Hier"
   }
 }
