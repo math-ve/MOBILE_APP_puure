@@ -8,8 +8,10 @@ import { ds, typography } from '../../lib/theme'
 //  link      : texte bleu (alternative douce, « Choisir une autre date »)
 //  quiet     : texte gris (« Annuler quand même », « Plus tard »)
 //  danger    : texte rouge (action définitive)
+//  destructive    : rouge plein (« Supprimer »)
+//  dangerOutline  : contour gris, texte rouge (« Annuler l'abonnement »)
 
-type Variant = 'primary' | 'secondary' | 'link' | 'quiet' | 'danger'
+type Variant = 'primary' | 'secondary' | 'link' | 'quiet' | 'danger' | 'destructive' | 'dangerOutline'
 
 type Props = {
   label: string
@@ -43,7 +45,7 @@ export default function PillButton({ label, onPress, variant = 'primary', loadin
       ]}
     >
       {loading
-        ? <ActivityIndicator color={variant === 'primary' ? '#fff' : ds.blue} />
+        ? <ActivityIndicator color={variant === 'primary' || variant === 'destructive' ? '#fff' : ds.blue} />
         : <Text style={[styles.label, labelStyles[variant]]} numberOfLines={1}>{label}</Text>}
     </Pressable>
   )
@@ -59,6 +61,8 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: ds.blue },
   secondary: { backgroundColor: ds.raised, borderWidth: 1, borderColor: ds.line },
+  destructive: { backgroundColor: ds.red },
+  dangerOutline: { backgroundColor: ds.raised, borderWidth: 1, borderColor: ds.line },
   link: { minHeight: 44 },
   quiet: { minHeight: 44 },
   danger: { minHeight: 44 },
@@ -70,6 +74,8 @@ const styles = StyleSheet.create({
 const labelStyles = StyleSheet.create({
   primary: { color: '#FFFFFF' },
   secondary: { color: ds.ink },
+  destructive: { color: '#FFFFFF' },
+  dangerOutline: { color: ds.red },
   link: { color: ds.blue, fontSize: 15 },
   quiet: { color: ds.body, fontSize: 15, fontFamily: typography.fontFamily.regular },
   danger: { color: ds.red, fontSize: 15 },

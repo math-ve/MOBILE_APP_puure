@@ -1,800 +1,380 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Animated, Easing, RefreshControl, Modal,
+  FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { router, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
-import Svg, { Path } from 'react-native-svg'
-import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
-import { supabase } from '../../lib/supabase'
-import * as analytics from '../../lib/analytics'
-import theme from '../../lib/theme'
-import { formatDate, formatDateShort, formatTime } from '../../lib/i18n/format'
-import ProgressRing from '../../components/ui/ProgressRing'
-import Logo from '../../components/ui/Logo'
-import SystemsProgress from '../../components/ui/SystemsProgress'
-import CartridgeAdvice from '../../components/home/CartridgeAdvice'
+import Svg, { Circle, Path } from 'react-native-svg'
+import AppHeader from '../../components/ds/AppHeader'
 import { AlertBanner } from '../../components/ds/Flow'
+import PillButton from '../../components/ds/PillButton'
+import Sheet from '../../components/ds/Sheet'
+import DotGauge, { AMBER } from '../../components/water/DotGauge'
+import SystemsRow, { SYSTEMS } from '../../components/water/SystemsRow'
+import PlanCard from '../../components/subscription/PlanCard'
+import { TAB_BAR_SPACE } from '../../components/ui/TabBar'
+import { supabase } from '../../lib/supabase'
+import { ds, typography } from '../../lib/theme'
+import { formatDate, formatDateShort } from '../../lib/i18n/format'
+import { useToast } from '../../hooks/useToast'
+import {
+  changeDate, daysLeft, deleteFilter, loadWater, replaceCartridge, SOON_DAYS, togglePause, usedPercent, WaterFilter,
+} from '../../lib/water'
 
-// ─── Helpers ───────────────────────────────────────────────
+// « Mon eau » (maquettes P04, P05, P32) : la cartouche de chaque filtre, le
+// conseil de remplacement, les systèmes Puure et l'abonnement.
 
-const greetingKey = () => {
-  const h = new Date().getHours()
-  if (h < 12) return 'home:greetingMorning'
-  if (h < 18) return 'home:greetingAfternoon'
-  return 'home:greetingEvening'
-}
+type SheetKind = 'replace' | 'options' | 'delete' | null
 
-const formatToday = () => {
-  const d = formatDate(new Date(), {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
-  return d.charAt(0).toUpperCase() + d.slice(1)
-}
-
-const getProgress = (timer: any) => {
-  const elapsed = (Date.now() - new Date(timer.started_at).getTime() - timer.total_paused_seconds * 1000) / 1000
-  return Math.min(Math.round((elapsed / (timer.expected_duration_days * 86400)) * 100), 100)
-}
-
-const getDaysRemaining = (timer: any) => {
-  const elapsedDays = (Date.now() - new Date(timer.started_at).getTime() - timer.total_paused_seconds * 1000) / 86400000
-  return Math.max(0, Math.ceil(timer.expected_duration_days - elapsedDays))
-}
-
-const getProgressColor = (p: number) =>
-  p >= 95 ? theme.colors.error : p >= 80 ? theme.colors.warning : theme.colors.blue
-
-const getProgressBg = (p: number) =>
-  p >= 95 ? 'rgba(227,44,43,0.10)' : p >= 80 ? 'rgba(255,92,0,0.10)' : 'rgba(39,100,255,0.10)'
-
-const NOTIF_LAST_SEEN_KEY = 'notifications_last_seen'
-
-const NOTIF_TYPE_ICONS: Record<string, string> = {
-  subscription_renewal_soon: '🔄',
-  cartridge_80: '💧',
-  cartridge_95: '⚠️',
-  order_shipped: '📦',
-}
-
-const formatNotifDate = (iso: string | null) => {
-  if (!iso) return ''
-  return formatDateShort(iso) + ' · ' + formatTime(iso)
-}
-
-// ─── Petits composants animés ──────────────────────────────
-
-function FadeIn({ index = 0, children, style }: { index?: number; children: React.ReactNode; style?: any }) {
-  const opacity = useRef(new Animated.Value(0)).current
-  const ty = useRef(new Animated.Value(20)).current
-
-  useEffect(() => {
-    const easing = Easing.bezier(0.16, 1, 0.3, 1)
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 400, delay: index * 100, easing, useNativeDriver: true }),
-      Animated.timing(ty, { toValue: 0, duration: 400, delay: index * 100, easing, useNativeDriver: true }),
-    ]).start()
-  }, [])
-
-  return (
-    <Animated.View style={[style, { opacity, transform: [{ translateY: ty }] }]}>
-      {children}
-    </Animated.View>
-  )
-}
-
-function PulseRing({ delay }: { delay: number }) {
-  const anim = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(anim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
-    )
-    loop.start()
-    return () => loop.stop()
-  }, [])
-
-  const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.6] })
-  const opacity = anim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [0.7, 0.25, 0] })
-
-  return (
-    <Animated.View
-      style={[styles.pulseRing, { transform: [{ scale }], opacity }]}
-    />
-  )
-}
-
-function PurityIndicator() {
-  return (
-    <View style={styles.purityIndicator}>
-      <PulseRing delay={0} />
-      <PulseRing delay={300} />
-      <PulseRing delay={600} />
-      <View style={styles.purityCore} />
-    </View>
-  )
-}
-
-function Skeleton({ style }: { style?: any }) {
-  const anim = useRef(new Animated.Value(-1)).current
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(anim, { toValue: 1, duration: 1200, easing: Easing.linear, useNativeDriver: true })
-    )
-    loop.start()
-    return () => loop.stop()
-  }, [])
-
-  const translateX = anim.interpolate({ inputRange: [-1, 1], outputRange: [-200, 200] })
-
-  return (
-    <View style={[styles.skeleton, style]}>
-      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX }] }]}>
-        <LinearGradient
-          colors={['transparent', 'rgba(255,255,255,0.6)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{ flex: 1 }}
-        />
-      </Animated.View>
-    </View>
-  )
-}
-
-function BellIcon() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24">
-      <Path
-        d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
-        fill={theme.colors.white}
-      />
-    </Svg>
-  )
-}
-
-function DropIcon({ size = 64, color = theme.colors.border }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M12 2C12 2 5 10 5 15a7 7 0 0 0 14 0c0-5-7-13-7-13z" fill={color} />
-    </Svg>
-  )
-}
-
-function GearIcon() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-        stroke={theme.colors.white}
-        strokeWidth={1.8}
-      />
-      <Path
-        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.62.77 1.03 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
-        stroke={theme.colors.white}
-        strokeWidth={1.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  )
-}
-
-// ─── Écran ─────────────────────────────────────────────────
-
-export default function HomeScreen() {
+export default function WaterScreen() {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
-  const [profile, setProfile] = useState<any>(null)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [timers, setTimers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { width } = useWindowDimensions()
+  const { showToast } = useToast()
+
+  const [userId, setUserId] = useState<string | null>(null)
+  const [filters, setFilters] = useState<WaterFilter[]>([])
+  const [subs, setSubs] = useState<any[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [notifications, setNotifications] = useState<any[]>([])
-  const [hasUnread, setHasUnread] = useState(false)
-  const [notifSheetOpen, setNotifSheetOpen] = useState(false)
-  // Abonnements actifs / en pause : bandeau « paiement refusé » et texte du conseil cartouche.
-  const [liveSubs, setLiveSubs] = useState<any[]>([])
+  const [page, setPage] = useState(0)
+  const [sheet, setSheet] = useState<SheetKind>(null)
+  const [busy, setBusy] = useState(false)
+  const pager = useRef<FlatList>(null)
 
-  useEffect(() => { loadData() }, [])
-
-  const loadData = async () => {
+  const load = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/(auth)/login'); return }
-      setUserEmail(user.email ?? null)
-      const [{ data: prof }, { data: tim }, { data: notifs }, { data: subs }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('cartridge_timers').select('*, filters(*)').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('notification_logs').select('*').eq('user_id', user.id).order('sent_at', { ascending: false }).limit(20),
-        supabase.from('subscriptions_cache').select('*').eq('user_id', user.id).in('status', ['active', 'paused']),
-      ])
-      setProfile(prof)
-      setTimers(tim ?? [])
-      setLiveSubs(subs ?? [])
-
-      const notifList = notifs ?? []
-      setNotifications(notifList)
-      const lastSeen = await AsyncStorage.getItem(NOTIF_LAST_SEEN_KEY)
-      setHasUnread(
-        notifList.length > 0 &&
-        (!lastSeen || new Date(notifList[0].sent_at).getTime() > new Date(lastSeen).getTime())
-      )
+      const water = await loadWater()
+      if (!water) { router.replace('/(auth)/login'); return }
+      setUserId(water.userId)
+      setFilters(water.filters)
+      const { data } = await supabase
+        .from('subscriptions_cache').select('*')
+        .eq('user_id', water.userId).in('status', ['active', 'paused'])
+        .order('next_billing_date', { ascending: true })
+      setSubs(data ?? [])
     } catch {
-      // Réseau/backend indisponible : on garde l'UI en état vide plutôt que de crasher.
-      // Le pull-to-refresh permet de réessayer.
+      // Hors ligne : on garde l'affichage, le tirer-pour-rafraîchir permet de réessayer.
     } finally {
-      setLoading(false)
+      setLoaded(true)
     }
-  }
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true)
-    try { await loadData() } finally { setRefreshing(false) }
   }, [])
 
-  const handleSignOut = async () => {
-    // Détache le push token de ce compte — l'appareil ne recevra plus ses notifications
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('profiles').update({ push_token: null }).eq('id', user.id)
+  useFocusEffect(useCallback(() => { load() }, [load]))
+
+  const onRefresh = async () => {
+    setRefreshing(true)
+    try { await load() } finally { setRefreshing(false) }
+  }
+
+  const current = filters[Math.min(page, Math.max(filters.length - 1, 0))] ?? null
+  const timer = current?.timer ?? null
+  const left = daysLeft(timer)
+  const soon = !!timer && !timer.paused_at && left <= SOON_DAYS
+  const failedSub = subs.find((s) => s.payment_failed_at)
+  const activeSub = subs.find((s) => s.status === 'active') ?? subs[0] ?? null
+  const owned = useMemo(() => Array.from(new Set(filters.map((f) => f.filter_type))), [filters])
+  const ownedSystems = SYSTEMS.filter((s) => owned.includes(s.type)).length
+  const months = Math.max(1, Math.round((timer?.expected_duration_days ?? current?.cartridge_lifespan_days ?? 90) / 30))
+  const pageWidth = width - 40
+
+  const run = async (fn: () => Promise<void>, message: string) => {
+    setBusy(true)
+    try {
+      await fn()
+      showToast(message, 'success')
+      setSheet(null)
+      await load()
+    } catch {
+      showToast(t('care:errors.generic'), 'error')
+    } finally {
+      setBusy(false)
     }
-    analytics.track('sign_out')
-    await analytics.reset()
-    await supabase.auth.signOut()
-    router.replace('/(auth)/login')
   }
 
-  const openNotifications = async () => {
-    setNotifSheetOpen(true)
-    analytics.track('notification_center_opened', { had_unread: hasUnread })
-    setHasUnread(false)
-    await AsyncStorage.setItem(NOTIF_LAST_SEEN_KEY, new Date().toISOString())
-  }
+  const openSubscription = (sub: any, open?: string) => router.push({
+    pathname: '/subscription-detail',
+    params: { contractId: sub.appstle_subscription_id, subData: JSON.stringify(sub), ...(open ? { open } : {}) },
+  })
 
-  // "Mathieu" depuis full_name, sinon depuis l'email avant le "." capitalisé
-  const rawFirstName = profile?.full_name?.split(' ')[0]
-    ?? userEmail?.split('@')[0]?.split('.')[0]
-    ?? null
-  const firstName = rawFirstName
-    ? rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1)
-    : null
-
-  const waterIsPure = timers.length > 0 && timers.every(t => getProgress(t) < 80)
-  const failedSub = liveSubs.find(s => s.payment_failed_at)
-  const soonestDaysLeft = timers.length > 0 ? Math.min(...timers.map(getDaysRemaining)) : null
-  // Types de systèmes possédés (dérivés des filtres actifs) pour le bloc gamifié
-  const ownedSystemTypes = Array.from(
-    new Set(timers.map(t => t.filters?.filter_type).filter(Boolean)),
-  )
-
-  return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.white} />
-      }
-    >
-      {/* ── SECTION 1 : HEADER NAVY ── */}
-      <View style={[styles.header, { paddingTop: insets.top + theme.spacing[5] }]}>
-        <View style={{ flex: 1 }}>
-          <View style={styles.headerLogo}>
-            <Logo width={88} color={theme.colors.white} />
-          </View>
-          <Text style={styles.greeting}>
-            {firstName
-              ? t('home:greetingWithName', { greeting: t(greetingKey()), name: firstName })
-              : t(greetingKey())}
+  // ── Bloc d'un filtre (titre + jauge + chiffres) ─────────────────
+  const renderFilter = ({ item }: { item: WaterFilter }) => {
+    const ft = item.timer
+    const u = usedPercent(ft)
+    const d = daysLeft(ft)
+    const warn = !!ft && !ft.paused_at && d <= SOON_DAYS
+    const installed = ft?.started_at ?? item.created_at
+    return (
+      <View style={{ width: pageWidth, gap: 20 }}>
+        <View style={styles.filterHead}>
+          <Text style={styles.filterName} accessibilityRole="header">{item.product_name}</Text>
+          <Text style={styles.filterMeta}>
+            {t('water:installedOn', {
+              type: t(`water:systems.${item.filter_type}`),
+              date: formatDate(installed, { day: 'numeric', month: 'long' }),
+            })}
           </Text>
-          <Text style={styles.dateText}>{formatToday()}</Text>
+          {ft?.paused_at ? <Text style={styles.pausedTag}>{t('water:pausedTag')}</Text> : null}
+          {!warn && (
+            <Pressable onPress={() => setSheet('options')} hitSlop={6} style={styles.textLink} accessibilityRole="button">
+              <Text style={styles.textLinkLabel}>{t('water:options')}</Text>
+            </Pressable>
+          )}
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.bellCircle}
-            onPress={openNotifications}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={hasUnread ? t('home:notificationsUnreadA11y') : t('home:notificationsA11y')}
-          >
-            <BellIcon />
-            {hasUnread && <View style={styles.bellBadge} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.bellCircle}
-            onPress={() => router.push('/settings')}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={t('settings:openA11y')}
-          >
-            <GearIcon />
-          </TouchableOpacity>
+
+        <DotGauge
+          remaining={100 - u}
+          caption={t('water:remaining')}
+          warning={warn}
+          accessibilityLabel={t('water:gaugeA11y', { percent: 100 - u })}
+        />
+
+        <View style={styles.stats}>
+          <Stat label={t('water:used')} value={`${u} %`} />
+          <Stat label={t('water:toChange')} value={ft ? (d <= 0 ? t('water:today') : formatDateShort(changeDate(ft)!)) : '—'} warn={warn} />
+          <Stat label={t('water:daysLeftLabel')} value={t('water:days', { count: d })} warn={warn} />
         </View>
       </View>
+    )
+  }
 
-      {loading ? (
-        /* ── SKELETONS ── */
-        <View style={styles.skeletonArea}>
-          <Skeleton style={{ height: 320, borderRadius: theme.radius['2xl'] }} />
-          <View style={styles.row}>
-            <Skeleton style={{ flex: 1, height: 140, borderRadius: theme.radius.xl }} />
-            <Skeleton style={{ flex: 1, height: 140, borderRadius: theme.radius.xl }} />
+  return (
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: TAB_BAR_SPACE + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ds.blue} />}
+      >
+        <AppHeader />
+
+        {failedSub && (
+          <AlertBanner
+            title={t('care:payment.failedTitle')}
+            body={t('care:payment.failedBody')}
+            onPress={() => openSubscription(failedSub, 'payment')}
+          />
+        )}
+
+        {!loaded ? null : filters.length === 0 ? (
+          <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
+                <Path d="M12 2.7s-6 6.6-6 11.3a6 6 0 0 0 12 0c0-4.7-6-11.3-6-11.3z" stroke={ds.blue} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            </View>
+            <Text style={styles.emptyTitle}>{t('water:empty.title')}</Text>
+            <Text style={styles.emptyBody}>{t('water:empty.body')}</Text>
+            <PillButton label={t('water:empty.cta')} onPress={() => router.push('/add-filter')} style={{ alignSelf: 'stretch' }} />
           </View>
-          <Skeleton style={{ height: 80, borderRadius: theme.radius.xl }} />
-        </View>
-      ) : (
-        <>
-          {/* ── SECTION 2 : HERO TIMER CARTOUCHE ── */}
-          <FadeIn index={0} style={styles.heroWrap}>
-            {failedSub && (
-              <View style={{ marginBottom: theme.spacing[3] }}>
-                <AlertBanner
-                  title={t('care:payment.failedTitle')}
-                  body={t('care:payment.failedBody')}
-                  onPress={() => router.push({
-                    pathname: '/subscription-detail',
-                    params: { contractId: failedSub.appstle_subscription_id, subData: JSON.stringify(failedSub), open: 'payment' },
-                  })}
-                />
-              </View>
-            )}
-            <View style={styles.heroCard}>
-              {timers.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <DropIcon />
-                  <Text style={styles.emptyTitle}>{t('home:noFilterConfigured')}</Text>
-                  <TouchableOpacity
-                    style={styles.btnBlue}
-                    onPress={() => router.push('/(tabs)/filters')}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.btnBlueText}>{t('home:addMyFilter')}</Text>
-                  </TouchableOpacity>
+        ) : (
+          <>
+            <View style={{ paddingTop: 12 }}>
+              <FlatList
+                ref={pager}
+                data={filters}
+                keyExtractor={(f) => f.id}
+                renderItem={renderFilter}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                scrollEnabled={filters.length > 1}
+                onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / pageWidth))}
+              />
+              {filters.length > 1 && (
+                <View style={styles.dots} accessibilityLabel={t('water:pager', { index: page + 1, total: filters.length })}>
+                  {filters.map((f, i) => <View key={f.id} style={[styles.pageDot, i === page && styles.pageDotOn]} />)}
                 </View>
-              ) : (
-                <>
-                  <Text style={styles.sectionCaps}>{t('home:yourCartridges').toUpperCase()}</Text>
-                  {timers.map((timer, i) => {
-                    const p = getProgress(timer)
-                    const days = getDaysRemaining(timer)
-                    return (
-                      <View key={timer.id} style={[styles.timerBlock, i > 0 && styles.timerBlockDivider]}>
-                        {/* Nom + badge % */}
-                        <View style={styles.timerHeader}>
-                          <Text style={styles.timerName}>{timer.filters?.product_name ?? t('home:filterFallback')}</Text>
-                          <View style={[styles.pctBadge, { backgroundColor: getProgressBg(p) }]}>
-                            <Text style={[styles.pctBadgeText, { color: getProgressColor(p) }]}>{p}%</Text>
-                          </View>
-                        </View>
-
-                        {/* Jauge circulaire */}
-                        <View style={styles.ringWrap}>
-                          <ProgressRing progress={p} size={180} strokeWidth={12} label={t('home:ringLabel')} />
-                        </View>
-
-                        {/* 3 stats */}
-                        <View style={styles.statsRow}>
-                          <View style={styles.statCol}>
-                            <Text style={styles.statValue}>{p}%</Text>
-                            <Text style={styles.statLabel}>{t('home:statUsed').toUpperCase()}</Text>
-                          </View>
-                          <View style={styles.statDivider} />
-                          <View style={styles.statCol}>
-                            <Text style={styles.statValue}>{t('home:daysShort', { count: days })}</Text>
-                            <Text style={styles.statLabel}>{t('home:statRemaining').toUpperCase()}</Text>
-                          </View>
-                        </View>
-
-                        {/* Bouton remplacé */}
-                        <TouchableOpacity
-                          style={styles.btnOutline}
-                          onPress={() => router.push('/(tabs)/filters')}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.btnOutlineText}>{t('home:cartridgeReplaced')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )
-                  })}
-                </>
               )}
             </View>
-          </FadeIn>
 
-          {/* ── Conseil cartouche + « Mon filtre ne va pas » ── */}
-          {timers.length > 0 && (
-            <FadeIn index={1} style={styles.section}>
-              <CartridgeAdvice
-                lifespansDays={timers.map(t => t.expected_duration_days).filter(Boolean)}
-                soonestDaysLeft={soonestDaysLeft}
-                hasActiveSubscription={liveSubs.some(s => s.status === 'active')}
-              />
-            </FadeIn>
-          )}
-
-          {/* ── SECTION 3 : SYSTÈMES PUURE (gamifié) ── */}
-          <FadeIn index={1} style={styles.section}>
-            <SystemsProgress ownedTypes={ownedSystemTypes} />
-          </FadeIn>
-
-          {/* ── SECTION 4 : BANNER EAU PURIFIÉE ── */}
-          {waterIsPure && (
-            <FadeIn index={2}>
-              <View style={styles.purityBanner}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.purityTitle}>{t('home:waterPurifiedTitle')}</Text>
-                  <Text style={styles.puritySub}>{t('home:waterPurifiedSub')}</Text>
+            {soon ? (
+              <>
+                <View style={styles.alertCard}>
+                  <View style={styles.alertIcon}>
+                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                      <Path d="M12 8v5M12 16.5v.01" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" />
+                      <Circle cx={12} cy={12} r={9} stroke="#FFFFFF" strokeWidth={2} />
+                    </Svg>
+                  </View>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Text style={styles.alertTitle}>
+                      {left <= 0 ? t('care:cartridge.late') : t('care:cartridge.soon', { count: left })}
+                    </Text>
+                    <Text style={styles.cardBody}>{t('care:cartridge.soonBody')}</Text>
+                  </View>
                 </View>
-                <PurityIndicator />
-              </View>
-            </FadeIn>
-          )}
+                <PillButton label={t('water:replaced')} onPress={() => setSheet('replace')} />
+              </>
+            ) : (
+              <>
+                <PillButton label={t('water:replaced')} onPress={() => setSheet('replace')} style={styles.replaceBtn} />
+                <Pressable
+                  onPress={() => router.push({ pathname: '/filter-help', params: { source: 'home' } })}
+                  style={[styles.textLink, { marginTop: -8 }]}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.textLinkLabel}>{t('care:filterHelp.link')}</Text>
+                </Pressable>
+                <View style={styles.adviceCard}>
+                  <View style={styles.adviceIcon}>
+                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                      <Path d="M12 2.7s-6 6.6-6 11.3a6 6 0 0 0 12 0c0-4.7-6-11.3-6-11.3z" stroke={ds.blue} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                      <Path d="M12 10v4M12 17v.01" stroke={ds.blue} strokeWidth={1.8} strokeLinecap="round" />
+                    </Svg>
+                  </View>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Text style={styles.adviceTitle}>{t('care:cartridge.rhythm', { count: months })}</Text>
+                    <Text style={styles.cardBody}>
+                      {activeSub?.status === 'active' ? t('care:cartridge.rhythmBody') : t('care:cartridge.soonBody')}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </>
+        )}
 
-          {/* ── SECTION 5 : DÉCONNEXION ── */}
-          <FadeIn index={3}>
-            <View style={{ height: theme.spacing[6] }} />
-            <TouchableOpacity onPress={handleSignOut} activeOpacity={0.6}>
-              <Text style={styles.signOut}>{t('home:signOut')}</Text>
-            </TouchableOpacity>
-          </FadeIn>
-        </>
+        {loaded && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle} accessibilityRole="header">{t('water:systemsTitle')}</Text>
+              <Text style={styles.sectionSub}>{t('water:systemsCount', { owned: ownedSystems, total: SYSTEMS.length })}</Text>
+            </View>
+            <SystemsRow owned={owned} />
+            <Text style={styles.hint}>{ownedSystems === SYSTEMS.length ? t('water:systemsDone') : t('water:systemsHint')}</Text>
+
+            {activeSub && (
+              <>
+                <View style={styles.sectionHead}>
+                  <Text style={styles.sectionTitle} accessibilityRole="header">{t('water:planSection')}</Text>
+                </View>
+                <PlanCard sub={activeSub} onPress={() => openSubscription(activeSub)} />
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {/* P06 — confirmer le remplacement */}
+      {sheet === 'replace' && current && userId && (
+        <Sheet
+          title={t('water:replace.title')}
+          subtitle={t('water:replace.body', { name: current.product_name })}
+          onClose={() => setSheet(null)}
+          footer={
+            <View style={styles.footerRow}>
+              <PillButton variant="secondary" label={t('common:cancel')} onPress={() => setSheet(null)} style={{ flex: 1 }} />
+              <PillButton
+                label={t('common:confirm')}
+                loading={busy}
+                onPress={() => run(() => replaceCartridge(userId, current), t('water:replace.done'))}
+                style={{ flex: 1 }}
+              />
+            </View>
+          }
+        />
       )}
 
-      {/* ── SHEET NOTIFICATIONS ── */}
-      <Modal
-        visible={notifSheetOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setNotifSheetOpen(false)}
-      >
-        <View style={styles.notifBackdrop}>
-          <TouchableOpacity style={{ flex: 1 }} onPress={() => setNotifSheetOpen(false)} activeOpacity={1} />
-          <View style={[styles.notifSheet, { paddingBottom: insets.bottom + theme.spacing[6] }]}>
-            <View style={styles.notifHandle} />
-            <Text style={styles.notifTitle}>{t('home:notificationsTitle')}</Text>
-            {notifications.length === 0 ? (
-              <View style={styles.notifEmpty}>
-                <Text style={styles.notifEmptyIcon}>🔔</Text>
-                <Text style={styles.notifEmptyText}>{t('home:noNotifications')}</Text>
-              </View>
-            ) : (
-              <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-                {notifications.map((n) => (
-                  <View key={n.id} style={styles.notifRow}>
-                    <Text style={styles.notifIcon}>{NOTIF_TYPE_ICONS[n.type] ?? '🔔'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.notifRowTitle}>{n.title}</Text>
-                      <Text style={styles.notifRowBody}>{n.body}</Text>
-                      <Text style={styles.notifRowDate}>{formatNotifDate(n.sent_at)}</Text>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
+      {/* P23 — options du filtre */}
+      {sheet === 'options' && current && (
+        <Sheet
+          title={current.product_name}
+          subtitle={t('water:menu.body')}
+          onClose={() => setSheet(null)}
+          footer={<>
+            <PillButton
+              variant="secondary"
+              label={current.timer?.paused_at ? t('water:menu.resume') : t('water:menu.pause')}
+              loading={busy}
+              onPress={() => run(() => togglePause(current), current.timer?.paused_at ? t('water:menu.resumed') : t('water:menu.paused'))}
+            />
+            <PillButton variant="dangerOutline" label={t('water:menu.delete')} onPress={() => setSheet('delete')} style={{ marginTop: 6 }} />
+            <PillButton variant="quiet" label={t('common:cancel')} onPress={() => setSheet(null)} />
+          </>}
+        />
+      )}
+
+      {/* P24 — supprimer le filtre */}
+      {sheet === 'delete' && current && (
+        <Sheet
+          title={t('water:delete.title')}
+          subtitle={t('water:delete.body', { name: current.product_name })}
+          onClose={() => setSheet(null)}
+          footer={
+            <View style={styles.footerRow}>
+              <PillButton variant="secondary" label={t('common:cancel')} onPress={() => setSheet(null)} style={{ flex: 1 }} />
+              <PillButton
+                variant="destructive"
+                label={t('water:delete.cta')}
+                loading={busy}
+                onPress={() => run(async () => { await deleteFilter(current); setPage(0) }, t('water:delete.done'))}
+                style={{ flex: 1 }}
+              />
+            </View>
+          }
+        />
+      )}
+    </View>
   )
 }
 
-// ─── Styles ────────────────────────────────────────────────
+function Stat({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statLabel}>{label.toLocaleUpperCase()}</Text>
+      <Text style={[styles.statValue, warn && { color: '#A4670A', fontFamily: typography.fontFamily.semiBold }]}>{value}</Text>
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    paddingBottom: 120,
-  },
+  root: { flex: 1, backgroundColor: ds.surface },
+  content: { paddingHorizontal: 20, gap: 20 },
 
-  // Header
-  header: {
-    backgroundColor: theme.colors.navy,
-    paddingHorizontal: theme.spacing[6],
-    // Padding étendu : la hero card vient chevaucher le bas du header (vrai overlap premium)
-    paddingBottom: theme.spacing[5] + theme.spacing[8],
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerLogo: {
-    marginBottom: theme.spacing[3],
-    marginLeft: -9, // compense le blanc tournant du viewBox SVG (~11 % à gauche) pour aligner la goutte sur le texte
-  },
-  greeting: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size['3xl'],
-    color: theme.colors.white,
-    letterSpacing: -0.5,
-  },
-  dateText: {
-    fontFamily: theme.typography.fontFamily.regular,
-    fontSize: theme.typography.size.base - 1,
-    color: 'rgba(255,255,255,0.5)',
-    marginTop: 2,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: theme.spacing[2],
-  },
-  bellCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.full,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.error,
-  },
+  filterHead: { alignItems: 'center', gap: 4 },
+  filterName: { fontFamily: typography.fontFamily.medium, fontSize: 20, lineHeight: 25, color: ds.ink, textAlign: 'center' },
+  filterMeta: { fontFamily: typography.fontFamily.regular, fontSize: 14, color: ds.muted, textAlign: 'center' },
+  pausedTag: { fontFamily: typography.fontFamily.medium, fontSize: 13, color: '#A4670A' },
+  textLink: { alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 10 },
+  textLinkLabel: { fontFamily: typography.fontFamily.medium, fontSize: 14, color: ds.blue },
 
-  // Skeletons
-  skeletonArea: {
-    paddingHorizontal: theme.spacing[4],
-    marginTop: -theme.spacing[8],
-    gap: theme.spacing[4],
-  },
-  skeleton: {
-    backgroundColor: theme.colors.border,
-    overflow: 'hidden',
-  },
+  stats: { flexDirection: 'row', gap: 8 },
+  stat: { flex: 1, alignItems: 'center', gap: 6 },
+  statLabel: { fontFamily: typography.fontFamily.semiBold, fontSize: 12, letterSpacing: 0.96, color: ds.muted },
+  statValue: { fontFamily: typography.fontFamily.medium, fontSize: 17, color: ds.ink },
 
-  // Hero
-  heroWrap: {
-    marginHorizontal: theme.spacing[4],
-    marginTop: -theme.spacing[8],
-  },
-  // Sections sous le hero : marge latérale cohérente + espacement vertical
-  section: {
-    marginHorizontal: theme.spacing[4],
-    marginTop: theme.spacing[5],
-  },
-  heroCard: {
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.radius['2xl'],
-    padding: theme.spacing[5],
-    ...theme.shadows.card,
-  },
-  sectionCaps: {
-    fontFamily: theme.typography.fontFamily.semiBold,
-    fontSize: theme.typography.size.xs,
-    color: theme.colors.textLight,
-    letterSpacing: 1.2,
-    marginBottom: theme.spacing[3],
-  },
-  timerBlock: {},
-  timerBlockDivider: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    marginTop: theme.spacing[5],
-    paddingTop: theme.spacing[5],
-  },
-  timerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  timerName: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.md,
-    color: theme.colors.navy,
-    flex: 1,
-    marginRight: theme.spacing[3],
-  },
-  pctBadge: {
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: theme.spacing[3],
-    paddingVertical: theme.spacing[1],
-  },
-  pctBadgeText: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.sm,
-  },
-  ringWrap: {
-    alignItems: 'center',
-    marginVertical: theme.spacing[4],
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    marginBottom: theme.spacing[5],
-  },
-  statCol: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statValue: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.lg,
-    color: theme.colors.navy,
-  },
-  statLabel: {
-    fontFamily: theme.typography.fontFamily.semiBold,
-    fontSize: 10,
-    color: theme.colors.textLight,
-    letterSpacing: 0.8,
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: theme.colors.border,
-  },
-  btnOutline: {
-    height: 44,
-    borderRadius: theme.radius.pill,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnOutlineText: {
-    fontFamily: theme.typography.fontFamily.semiBold,
-    fontSize: theme.typography.size.base - 1,
-    color: theme.colors.textMid,
-  },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 16 },
+  pageDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: ds.line },
+  pageDotOn: { backgroundColor: ds.blue, width: 16 },
 
-  // Empty state
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing[6],
-    gap: theme.spacing[4],
+  replaceBtn: { minHeight: 50 },
+  adviceCard: {
+    flexDirection: 'row', gap: 14, alignItems: 'flex-start',
+    backgroundColor: ds.raised, borderWidth: 1, borderColor: ds.line, borderRadius: ds.radius.card,
+    paddingVertical: 18, paddingHorizontal: 20,
   },
-  emptyTitle: {
-    fontFamily: theme.typography.fontFamily.medium,
-    fontSize: theme.typography.size.md,
-    color: theme.colors.textMid,
+  adviceIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: ds.blueSoft, alignItems: 'center', justifyContent: 'center' },
+  adviceTitle: { fontFamily: typography.fontFamily.medium, fontSize: 16, lineHeight: 21, color: ds.ink },
+  cardBody: { fontFamily: typography.fontFamily.regular, fontSize: 14, lineHeight: 21, color: ds.body },
+  alertCard: {
+    flexDirection: 'row', gap: 14, alignItems: 'flex-start',
+    backgroundColor: ds.raised, borderWidth: 1, borderColor: '#F2D9B0', borderRadius: ds.radius.card,
+    paddingVertical: 18, paddingHorizontal: 20,
   },
-  btnBlue: {
-    backgroundColor: theme.colors.blue,
-    borderRadius: theme.radius.pill,
-    paddingVertical: theme.spacing[3],
-    paddingHorizontal: theme.spacing[6],
-  },
-  btnBlueText: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.base,
-    color: theme.colors.white,
-  },
+  alertIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: AMBER, alignItems: 'center', justifyContent: 'center' },
+  alertTitle: { fontFamily: typography.fontFamily.medium, fontSize: 17, lineHeight: 22, color: ds.ink },
 
-  // Row de mini-cards
-  row: {
-    flexDirection: 'row',
-    gap: theme.spacing[3],
-    paddingHorizontal: theme.spacing[4],
-    marginTop: theme.spacing[4],
-  },
+  sectionHead: { borderTopWidth: 1, borderTopColor: ds.line, marginTop: 8, paddingTop: 28, alignItems: 'center', gap: 4 },
+  sectionTitle: { fontFamily: typography.fontFamily.medium, fontSize: 20, lineHeight: 25, color: ds.ink },
+  sectionSub: { fontFamily: typography.fontFamily.regular, fontSize: 14, color: ds.muted },
+  hint: { fontFamily: typography.fontFamily.regular, fontSize: 14, lineHeight: 20, color: ds.muted, textAlign: 'center' },
 
-  // Banner pureté
-  purityBanner: {
-    backgroundColor: theme.colors.navy,
-    borderRadius: theme.radius.xl,
-    padding: theme.spacing[5],
-    marginHorizontal: theme.spacing[4],
-    marginTop: theme.spacing[4],
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  purityTitle: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.base,
-    color: theme.colors.white,
-  },
-  puritySub: {
-    fontFamily: theme.typography.fontFamily.regular,
-    fontSize: theme.typography.size.xs + 1,
-    color: 'rgba(255,255,255,0.6)',
-    marginTop: 3,
-  },
-  purityIndicator: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.full,
-    borderWidth: 1.5,
-    borderColor: theme.colors.success,
-  },
-  purityCore: {
-    width: 12,
-    height: 12,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.success,
-  },
+  empty: { alignItems: 'center', gap: 10, paddingTop: 40 },
+  emptyIcon: { width: 72, height: 72, borderRadius: 24, backgroundColor: ds.blueSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  emptyTitle: { fontFamily: typography.fontFamily.medium, fontSize: 24, color: ds.ink, textAlign: 'center' },
+  emptyBody: { fontFamily: typography.fontFamily.regular, fontSize: 15, lineHeight: 22, color: ds.body, textAlign: 'center', marginBottom: 10 },
 
-  // Sheet notifications
-  notifBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(8,21,61,0.5)',
-    justifyContent: 'flex-end',
-  },
-  notifSheet: {
-    backgroundColor: theme.colors.white,
-    borderTopLeftRadius: theme.radius['3xl'],
-    borderTopRightRadius: theme.radius['3xl'],
-    padding: theme.spacing[6],
-  },
-  notifHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: theme.colors.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: theme.spacing[5],
-  },
-  notifTitle: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.xl,
-    color: theme.colors.navy,
-    marginBottom: theme.spacing[4],
-  },
-  notifEmpty: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing[8],
-    gap: theme.spacing[3],
-  },
-  notifEmptyIcon: { fontSize: 36 },
-  notifEmptyText: {
-    fontFamily: theme.typography.fontFamily.regular,
-    fontSize: theme.typography.size.base,
-    color: theme.colors.textLight,
-  },
-  notifRow: {
-    flexDirection: 'row',
-    gap: theme.spacing[3],
-    paddingVertical: theme.spacing[3],
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  notifIcon: {
-    fontSize: 22,
-    marginTop: 2,
-  },
-  notifRowTitle: {
-    fontFamily: theme.typography.fontFamily.bold,
-    fontSize: theme.typography.size.base,
-    color: theme.colors.navy,
-  },
-  notifRowBody: {
-    fontFamily: theme.typography.fontFamily.regular,
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.textMid,
-    lineHeight: 19,
-    marginTop: 2,
-  },
-  notifRowDate: {
-    fontFamily: theme.typography.fontFamily.regular,
-    fontSize: theme.typography.size.xs,
-    color: theme.colors.textLight,
-    marginTop: theme.spacing[1],
-  },
-
-  // Déconnexion
-  signOut: {
-    fontFamily: theme.typography.fontFamily.regular,
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.textLight,
-    textAlign: 'center',
-  },
+  footerRow: { flexDirection: 'row', gap: 12 },
 })

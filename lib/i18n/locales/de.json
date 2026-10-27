@@ -38,7 +38,9 @@
     "home": "Start",
     "subscriptions": "Abonnements",
     "filters": "Filter",
-    "support": "Support"
+    "support": "Support",
+    "water": "Mein Wasser",
+    "orders": "Bestellungen"
   },
   "home": {
     "greetingMorning": "Guten Morgen",
@@ -665,6 +667,87 @@
     "errors": {
       "generic": "Das hat nicht geklappt. Bitte versuche es gleich noch einmal.",
       "session": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
+    }
+  },
+  "water": {
+    "remaining": "übrig",
+    "used": "Verbraucht",
+    "toChange": "Wechseln am",
+    "daysLeftLabel": "Verbleibend",
+    "days_one": "{{count}} Tag",
+    "days_other": "{{count}} Tage",
+    "today": "Heute",
+    "installedOn": "{{type}} · installiert am {{date}}",
+    "pausedTag": "Tracking pausiert",
+    "options": "Filteroptionen",
+    "replaced": "Kartusche gewechselt",
+    "gaugeA11y": "Kartusche: {{percent}} % übrig",
+    "pager": "Filter {{index}} von {{total}}",
+    "systemsTitle": "Deine Puure-Systeme",
+    "systemsCount": "{{owned}} von {{total}}",
+    "systemsHint": "Vervollständige deinen Schutz für überall gefiltertes Wasser.",
+    "systemsDone": "Dein Wasser ist überall gefiltert.",
+    "systems": {
+      "robinet": "Wasserhahn",
+      "douche": "Dusche",
+      "sous-evier": "Untertisch",
+      "autre": "Filter",
+      "installed": "Installiert",
+      "add": "Hinzufügen"
+    },
+    "planSection": "Mein Abo",
+    "plan": {
+      "title": "{{period}}-Nachfüllung",
+      "period_month_one": "{{count}}-Monats",
+      "period_month_other": "{{count}}-Monats",
+      "period_week_one": "{{count}}-Wochen",
+      "period_week_other": "{{count}}-Wochen",
+      "period_day_one": "{{count}}-Tages",
+      "period_day_other": "{{count}}-Tages",
+      "cartridges_one": "{{count}} Kartusche",
+      "cartridges_other": "{{count}} Kartuschen",
+      "nextDelivery": "Nächste Lieferung",
+      "paused": "Abo pausiert"
+    },
+    "empty": {
+      "title": "Füge deinen Filter hinzu",
+      "body": "Verfolge die Abnutzung deiner Kartusche und wisse genau, wann du sie wechseln musst.",
+      "cta": "Meinen Filter hinzufügen"
+    },
+    "replace": {
+      "title": "Wechsel bestätigen",
+      "body": "Der Zähler für {{name}} startet bei null und ein neuer Zyklus beginnt.",
+      "done": "Neue Kartusche gespeichert"
+    },
+    "menu": {
+      "body": "Was möchtest du tun?",
+      "pause": "Pausieren",
+      "resume": "Tracking fortsetzen",
+      "delete": "Diesen Filter löschen",
+      "paused": "Tracking pausiert",
+      "resumed": "Tracking fortgesetzt"
+    },
+    "delete": {
+      "title": "Diesen Filter löschen?",
+      "body": "{{name}} und das Tracking seiner Kartusche werden gelöscht. Das ist endgültig.",
+      "cta": "Löschen",
+      "done": "Filter gelöscht"
+    },
+    "add": {
+      "header": "Filter hinzufügen",
+      "name": "Name des Filters",
+      "namePlaceholder": "Küchenfilter",
+      "type": "Typ",
+      "location": "Standort",
+      "locationPlaceholder": "Küche, Bad…",
+      "installedOn": "Installiert am",
+      "lifespan": "Lebensdauer",
+      "lifespanValue": "{{count}} T",
+      "decrease": "Lebensdauer verringern",
+      "increase": "Lebensdauer erhöhen",
+      "save": "Filter speichern",
+      "nameRequired": "Gib deinem Filter einen Namen.",
+      "done": "Filter hinzugefügt"
     }
   }
 }

@@ -38,7 +38,9 @@
     "home": "Home",
     "subscriptions": "Subscriptions",
     "filters": "Filters",
-    "support": "Support"
+    "support": "Support",
+    "water": "My water",
+    "orders": "Orders"
   },
   "home": {
     "greetingMorning": "Good morning",
@@ -665,6 +667,87 @@
     "errors": {
       "generic": "That didn't work. Please try again in a moment.",
       "session": "Your session has expired. Please sign in again."
+    }
+  },
+  "water": {
+    "remaining": "left",
+    "used": "Used",
+    "toChange": "Change on",
+    "daysLeftLabel": "Days left",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "today": "Today",
+    "installedOn": "{{type}} · installed {{date}}",
+    "pausedTag": "Tracking paused",
+    "options": "Filter options",
+    "replaced": "Cartridge replaced",
+    "gaugeA11y": "Cartridge: {{percent}}% left",
+    "pager": "Filter {{index}} of {{total}}",
+    "systemsTitle": "Your Puure systems",
+    "systemsCount": "{{owned}} of {{total}}",
+    "systemsHint": "Complete your protection for filtered water everywhere.",
+    "systemsDone": "Your water is filtered everywhere.",
+    "systems": {
+      "robinet": "Tap",
+      "douche": "Shower",
+      "sous-evier": "Under-sink",
+      "autre": "Filter",
+      "installed": "Installed",
+      "add": "Add"
+    },
+    "planSection": "My subscription",
+    "plan": {
+      "title": "{{period}} refill",
+      "period_month_one": "{{count}}-month",
+      "period_month_other": "{{count}}-month",
+      "period_week_one": "{{count}}-week",
+      "period_week_other": "{{count}}-week",
+      "period_day_one": "{{count}}-day",
+      "period_day_other": "{{count}}-day",
+      "cartridges_one": "{{count}} cartridge",
+      "cartridges_other": "{{count}} cartridges",
+      "nextDelivery": "Next delivery",
+      "paused": "Subscription paused"
+    },
+    "empty": {
+      "title": "Add your filter",
+      "body": "Track your cartridge's wear and know exactly when to change it.",
+      "cta": "Add my filter"
+    },
+    "replace": {
+      "title": "Confirm the replacement",
+      "body": "The counter for {{name}} resets to zero and a new cycle starts.",
+      "done": "New cartridge saved"
+    },
+    "menu": {
+      "body": "What would you like to do?",
+      "pause": "Pause",
+      "resume": "Resume tracking",
+      "delete": "Delete this filter",
+      "paused": "Tracking paused",
+      "resumed": "Tracking resumed"
+    },
+    "delete": {
+      "title": "Delete this filter?",
+      "body": "{{name}} and its cartridge tracking will be deleted. This can't be undone.",
+      "cta": "Delete",
+      "done": "Filter deleted"
+    },
+    "add": {
+      "header": "Add a filter",
+      "name": "Filter name",
+      "namePlaceholder": "Kitchen filter",
+      "type": "Type",
+      "location": "Location",
+      "locationPlaceholder": "Kitchen, bathroom…",
+      "installedOn": "Installed on",
+      "lifespan": "Lifespan",
+      "lifespanValue": "{{count}} d",
+      "decrease": "Decrease lifespan",
+      "increase": "Increase lifespan",
+      "save": "Save filter",
+      "nameRequired": "Give your filter a name.",
+      "done": "Filter added"
     }
   }
 }

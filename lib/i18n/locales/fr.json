@@ -38,7 +38,9 @@
     "home": "Accueil",
     "subscriptions": "Abonnements",
     "filters": "Filtres",
-    "support": "Support"
+    "support": "Support",
+    "water": "Mon eau",
+    "orders": "Commandes"
   },
   "home": {
     "greetingMorning": "Bonjour",
@@ -665,6 +667,87 @@
     "errors": {
       "generic": "L'action n'a pas abouti. Réessayez dans un instant.",
       "session": "Votre session a expiré. Reconnectez-vous."
+    }
+  },
+  "water": {
+    "remaining": "restant",
+    "used": "Utilisé",
+    "toChange": "À changer",
+    "daysLeftLabel": "Restants",
+    "days_one": "{{count}} jour",
+    "days_other": "{{count}} jours",
+    "today": "Aujourd'hui",
+    "installedOn": "{{type}} · installé le {{date}}",
+    "pausedTag": "Suivi en pause",
+    "options": "Options du filtre",
+    "replaced": "Cartouche remplacée",
+    "gaugeA11y": "Cartouche : {{percent}} % restant",
+    "pager": "Filtre {{index}} sur {{total}}",
+    "systemsTitle": "Vos systèmes Puure",
+    "systemsCount": "{{owned}} sur {{total}}",
+    "systemsHint": "Complétez votre protection pour une eau filtrée partout.",
+    "systemsDone": "Votre eau est filtrée partout.",
+    "systems": {
+      "robinet": "Robinet",
+      "douche": "Douche",
+      "sous-evier": "Sous-évier",
+      "autre": "Filtre",
+      "installed": "Installé",
+      "add": "Ajouter"
+    },
+    "planSection": "Mon abonnement",
+    "plan": {
+      "title": "Recharge {{period}}",
+      "period_month_one": "{{count}} mois",
+      "period_month_other": "{{count}} mois",
+      "period_week_one": "{{count}} semaine",
+      "period_week_other": "{{count}} semaines",
+      "period_day_one": "{{count}} jour",
+      "period_day_other": "{{count}} jours",
+      "cartridges_one": "{{count}} cartouche",
+      "cartridges_other": "{{count}} cartouches",
+      "nextDelivery": "Prochaine livraison",
+      "paused": "Abonnement en pause"
+    },
+    "empty": {
+      "title": "Ajoutez votre filtre",
+      "body": "Suivez l'usure de votre cartouche et sachez exactement quand la changer.",
+      "cta": "Ajouter mon filtre"
+    },
+    "replace": {
+      "title": "Confirmer le remplacement",
+      "body": "Le compteur du {{name}} repart à zéro et un nouveau cycle commence.",
+      "done": "Nouvelle cartouche enregistrée"
+    },
+    "menu": {
+      "body": "Que souhaitez-vous faire ?",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre le suivi",
+      "delete": "Supprimer ce filtre",
+      "paused": "Suivi mis en pause",
+      "resumed": "Suivi repris"
+    },
+    "delete": {
+      "title": "Supprimer ce filtre ?",
+      "body": "Le {{name}} et le suivi de sa cartouche seront supprimés. Cette action est définitive.",
+      "cta": "Supprimer",
+      "done": "Filtre supprimé"
+    },
+    "add": {
+      "header": "Ajouter un filtre",
+      "name": "Nom du filtre",
+      "namePlaceholder": "Filtre cuisine",
+      "type": "Type",
+      "location": "Emplacement",
+      "locationPlaceholder": "Cuisine, salle de bain…",
+      "installedOn": "Installé le",
+      "lifespan": "Durée de vie",
+      "lifespanValue": "{{count}} j",
+      "decrease": "Réduire la durée de vie",
+      "increase": "Augmenter la durée de vie",
+      "save": "Enregistrer le filtre",
+      "nameRequired": "Donnez un nom à votre filtre.",
+      "done": "Filtre ajouté"
     }
   }
 }
