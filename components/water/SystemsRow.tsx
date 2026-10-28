@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
@@ -14,10 +15,16 @@ export const SYSTEMS: { type: FilterType; image: any }[] = [
   { type: 'sous-evier', image: require('../../assets/products/under-sink-system.png') },
 ]
 
+const GAP = 8
+
 export default function SystemsRow({ owned }: { owned: string[] }) {
   const { t } = useTranslation()
+  // Image carrée en points : width '100%' + aspectRatio s'étire sur iPhone
+  // (Yoga retombe sur la taille intrinsèque du PNG).
+  const [rowWidth, setRowWidth] = useState(0)
+  const side = rowWidth > 0 ? Math.floor((rowWidth - GAP * (SYSTEMS.length - 1)) / SYSTEMS.length) : 0
   return (
-    <View style={styles.row}>
+    <View style={styles.row} onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
       {SYSTEMS.map((s) => {
         const has = owned.includes(s.type)
         const label = t(`water:systems.${s.type}`)
@@ -30,7 +37,7 @@ export default function SystemsRow({ owned }: { owned: string[] }) {
             accessibilityLabel={`${label}, ${has ? t('water:systems.installed') : t('water:systems.add')}`}
             style={({ pressed }) => [styles.card, has && styles.cardOwned, pressed && { opacity: 0.85 }]}
           >
-            <Image source={s.image} style={styles.image} resizeMode="cover" />
+            <Image source={s.image} style={[styles.image, { height: side }]} resizeMode="cover" />
             <View style={styles.text}>
               <Text style={styles.name} numberOfLines={1}>{label}</Text>
               <Text style={has ? styles.status : styles.add} numberOfLines={1}>
@@ -52,10 +59,10 @@ export default function SystemsRow({ owned }: { owned: string[] }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8 },
-  card: { flex: 1, borderRadius: 20, borderWidth: 1, borderColor: ds.line, backgroundColor: ds.raised, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: GAP },
+  card: { flex: 1, minWidth: 0, borderRadius: 20, borderWidth: 1, borderColor: ds.line, backgroundColor: ds.raised, overflow: 'hidden' },
   cardOwned: { borderWidth: 2, borderColor: ds.blue },
-  image: { width: '100%', aspectRatio: 1 },
+  image: { width: '100%' },
   text: { paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
   name: { fontFamily: typography.fontFamily.medium, fontSize: 15, color: ds.ink },
   status: { fontFamily: typography.fontFamily.regular, fontSize: 14, color: ds.muted },

@@ -36,6 +36,9 @@ export default function AddFilterScreen() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  // Image carrée en points (voir SystemsRow : aspectRatio s'étire sur iPhone).
+  const [typesWidth, setTypesWidth] = useState(0)
+  const typeSide = typesWidth > 0 ? Math.floor((typesWidth - 16) / 3) : 0
 
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null)) }, [])
 
@@ -75,7 +78,7 @@ export default function AddFilterScreen() {
 
       <View style={{ gap: 8 }}>
         <FieldLabel>{t('water:add.type')}</FieldLabel>
-        <View style={styles.types}>
+        <View style={styles.types} onLayout={(e) => setTypesWidth(e.nativeEvent.layout.width)}>
           {SYSTEMS.map((s) => {
             const on = type === s.type
             return (
@@ -86,7 +89,7 @@ export default function AddFilterScreen() {
                 accessibilityState={{ checked: on }}
                 style={[styles.typeCard, on && styles.typeCardOn]}
               >
-                <Image source={s.image} style={styles.typeImage} />
+                <Image source={s.image} style={[styles.typeImage, { height: typeSide }]} resizeMode="cover" />
                 <Text style={styles.typeLabel}>{t(`water:systems.${s.type}`)}</Text>
                 {on && (
                   <View style={styles.check}>
@@ -157,10 +160,10 @@ export default function AddFilterScreen() {
 }
 
 const styles = StyleSheet.create({
-  types: { flexDirection: 'row', gap: 8 },
-  typeCard: { flex: 1, borderRadius: 20, borderWidth: 1, borderColor: ds.line, backgroundColor: ds.raised, overflow: 'hidden' },
+  types: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  typeCard: { flex: 1, minWidth: 0, borderRadius: 20, borderWidth: 1, borderColor: ds.line, backgroundColor: ds.raised, overflow: 'hidden' },
   typeCardOn: { borderWidth: 2, borderColor: ds.blue },
-  typeImage: { width: '100%', aspectRatio: 1 },
+  typeImage: { width: '100%' },
   typeLabel: { paddingVertical: 10, paddingHorizontal: 12, fontFamily: typography.fontFamily.medium, fontSize: 15, color: ds.ink, textAlign: 'center' },
   check: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: ds.blue, alignItems: 'center', justifyContent: 'center' },
   twoCols: { flexDirection: 'row', gap: 10 },
