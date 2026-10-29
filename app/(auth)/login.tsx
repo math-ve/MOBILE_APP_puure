@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
-  View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView,
+  View, Text, TextInput, Pressable, StyleSheet, Platform, Animated, Easing, Keyboard, Dimensions,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -27,9 +27,38 @@ const LOGO_WIDTH = 26 * 341.1 / 96.8
 const SUPABASE_URL = 'https://vwlqdrrlggolgdssdwoh.supabase.co'
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bHFkcnJsZ2dvbGdkc3Nkd29oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2ODkyNjIsImV4cCI6MjA5NTI2NTI2Mn0.859w5rLfcdZWG_vhk0tQM0cqcwRluIFlHjLIsM3Sr5o'
 
+/** Écart entre le bas du formulaire et le haut du clavier. */
+const KEYBOARD_GAP = 12
+
+/**
+ * Décalage vertical du bloc du bas, qui suit le clavier iOS image par image :
+ * même durée et courbe proche de celle du clavier, animée côté natif (pas de
+ * nouvelle mise en page). Sur Android, la fenêtre se redimensionne déjà.
+ */
+function useKeyboardLift(bottomPadding: number) {
+  const lift = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return
+    const sub = Keyboard.addListener('keyboardWillChangeFrame', (e) => {
+      const keyboardHeight = Math.max(0, Dimensions.get('screen').height - e.endCoordinates.screenY)
+      const to = keyboardHeight > 0 ? -(keyboardHeight - bottomPadding + KEYBOARD_GAP) : 0
+      Animated.timing(lift, {
+        toValue: Math.min(0, to),
+        duration: e.duration || 250,
+        easing: Easing.bezier(0.38, 0.7, 0.125, 1),
+        useNativeDriver: true,
+      }).start()
+    })
+    return () => sub.remove()
+  }, [bottomPadding, lift])
+  return lift
+}
+
 export default function LoginScreen() {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
+  const bottomPadding = insets.bottom + 24
+  const lift = useKeyboardLift(bottomPadding)
   const [email, setEmail] = useState('')
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
   const [password, setPassword] = useState('')
@@ -142,9 +171,9 @@ export default function LoginScreen() {
         </>
       )}
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1 }}>
         {step === 'otp' ? (
-          <View style={[styles.page, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.page, { paddingTop: insets.top + 20, paddingBottom: bottomPadding }]}>
             <Pressable onPress={backToEmail} style={styles.backCircle} accessibilityRole="button" accessibilityLabel={t('common:back')} hitSlop={6}>
               <Glyph name="back" size={20} color={ds.ink} />
             </Pressable>
@@ -182,14 +211,14 @@ export default function LoginScreen() {
               </View>
             </View>
             <View style={{ flex: 1 }} />
-            <View style={{ gap: 6 }}>
+            <Animated.View style={{ gap: 6, transform: [{ translateY: lift }] }}>
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <PillButton label={t('auth:signIn')} loading={loading} onPress={handleVerifyCode} />
               <PillButton variant="quiet" label={t('auth:changeEmail')} onPress={backToEmail} />
-            </View>
+            </Animated.View>
           </View>
         ) : (
-          <View style={[styles.page, styles.overVideo, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.page, styles.overVideo, { paddingTop: insets.top + 8, paddingBottom: bottomPadding }]}>
             <View style={{ gap: 14 }}>
               {/* Appui long sur le logo : connexion par mot de passe (compte de démo App Review). */}
               <Pressable onLongPress={() => { setStep('password'); setError('') }} delayLongPress={1500} style={{ alignSelf: 'flex-start' }}>
@@ -203,7 +232,7 @@ export default function LoginScreen() {
 
             <View style={{ flex: 1 }} />
 
-            <View style={{ gap: 12 }}>
+            <Animated.View style={{ gap: 12, transform: [{ translateY: lift }] }}>
               <TextInput
                 style={styles.input}
                 placeholder={t('auth:emailPlaceholder')}
@@ -254,10 +283,10 @@ export default function LoginScreen() {
                   </View>
                 </>
               )}
-            </View>
+            </Animated.View>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
     </View>
   )
 }
