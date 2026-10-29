@@ -39,8 +39,10 @@ export default function LoginScreen() {
   const otpRefs = useRef<any[]>([])
   const [focused, setFocused] = useState<number | null>(null)
 
+  // Vidéo montée en aller-retour (lecture puis lecture inversée) : la boucle
+  // retombe sur l'image de départ, sans saut au raccord.
   const player = useVideoPlayer(
-    require('../../assets/videos/Purificateur_Inox_SequenceFixe_HomePage_Telephone_WEB_HD.mp4'),
+    require('../../assets/videos/login-loop.mp4'),
     (p) => { p.loop = true; p.muted = true; p.play() }
   )
 
