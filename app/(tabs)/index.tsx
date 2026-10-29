@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native'
@@ -11,8 +11,6 @@ import { AlertBanner } from '../../components/ds/Flow'
 import PillButton from '../../components/ds/PillButton'
 import Sheet from '../../components/ds/Sheet'
 import DotGauge, { AMBER } from '../../components/water/DotGauge'
-import SystemsRow, { SYSTEMS } from '../../components/water/SystemsRow'
-import PlanCard from '../../components/subscription/PlanCard'
 import { TAB_BAR_SPACE } from '../../components/ui/TabBar'
 import { supabase } from '../../lib/supabase'
 import { ds, typography } from '../../lib/theme'
@@ -74,8 +72,6 @@ export default function WaterScreen() {
   const soon = !!timer && !timer.paused_at && left <= SOON_DAYS
   const failedSub = subs.find((s) => s.payment_failed_at)
   const activeSub = subs.find((s) => s.status === 'active') ?? subs[0] ?? null
-  const owned = useMemo(() => Array.from(new Set(filters.map((f) => f.filter_type))), [filters])
-  const ownedSystems = SYSTEMS.filter((s) => owned.includes(s.type)).length
   const months = Math.max(1, Math.round((timer?.expected_duration_days ?? current?.cartridge_lifespan_days ?? 90) / 30))
   const pageWidth = width - 40
 
@@ -235,26 +231,6 @@ export default function WaterScreen() {
             )}
           </>
         )}
-
-        {loaded && (
-          <>
-            <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle} accessibilityRole="header">{t('water:systemsTitle')}</Text>
-              <Text style={styles.sectionSub}>{t('water:systemsCount', { owned: ownedSystems, total: SYSTEMS.length })}</Text>
-            </View>
-            <SystemsRow owned={owned} />
-            <Text style={styles.hint}>{ownedSystems === SYSTEMS.length ? t('water:systemsDone') : t('water:systemsHint')}</Text>
-
-            {activeSub && (
-              <>
-                <View style={styles.sectionHead}>
-                  <Text style={styles.sectionTitle} accessibilityRole="header">{t('water:planSection')}</Text>
-                </View>
-                <PlanCard sub={activeSub} onPress={() => openSubscription(activeSub)} />
-              </>
-            )}
-          </>
-        )}
       </ScrollView>
 
       {/* P06 — confirmer le remplacement */}
@@ -366,10 +342,6 @@ const styles = StyleSheet.create({
   alertIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: AMBER, alignItems: 'center', justifyContent: 'center' },
   alertTitle: { fontFamily: typography.fontFamily.medium, fontSize: 17, lineHeight: 22, color: ds.ink },
 
-  sectionHead: { borderTopWidth: 1, borderTopColor: ds.line, marginTop: 8, paddingTop: 28, alignItems: 'center', gap: 4 },
-  sectionTitle: { fontFamily: typography.fontFamily.medium, fontSize: 20, lineHeight: 25, color: ds.ink },
-  sectionSub: { fontFamily: typography.fontFamily.regular, fontSize: 14, color: ds.muted },
-  hint: { fontFamily: typography.fontFamily.regular, fontSize: 14, lineHeight: 20, color: ds.muted, textAlign: 'center' },
 
   empty: { alignItems: 'center', gap: 10, paddingTop: 40 },
   emptyIcon: { width: 72, height: 72, borderRadius: 24, backgroundColor: ds.blueSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
